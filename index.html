@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>New Estimate — GBB Fiber Estimator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+
+<body>
+
+<a href="#main-content" class="skip-link">
+  Skip to content
+</a>
+
+
+<div class="mobile-topbar">
+
+  <span class="logo-text">
+    GBB Fiber Estimator
+  </span>
+
+  <button
+    class="hamburger-btn"
+    aria-label="Open navigation"
+    aria-expanded="false"
+  >
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
+
+</div>
+
+
+<div class="nav-overlay"></div>
+
+
+<div class="app-shell">
+
+  <!-- ================= SIDEBAR ================= -->
+
+  <aside
+    class="sidebar mobile-drawer"
+    id="sidebar"
+  >
+
+    <div class="sidebar-logo">
+
+      <svg
+        class="logo-icon"
+        viewBox="0 0 34 34"
+        fill="none"
+      >
+        <circle
+          cx="17"
+          cy="17"
+          r="15"
+          stroke="white"
+          stroke-width="2"
+        />
+
+        <circle
+          cx="17"
+          cy="17"
+          r="9"
+          stroke="white"
+          stroke-width="2"
+        />
+
+        <circle
+          cx="17"
+          cy="17"
+          r="3"
+          fill="white"
+        />
+      </svg>
+
+      <span class="logo-text">
+        GBB Fiber<br/>Estimator
+      </span>
+
+    </div>
+
+
+    <a
+      href="index.html"
+      class="new-estimate-btn"
+    >
+
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+
+      <span>
+        New Estimate
+      </span>
+
+    </a>
+
+
+    <nav
+      class="sidebar-nav"
+      aria-label="Main navigation"
+    >
+
+      <a
+        href="index.html"
+        class="active"
+      >
+        <span>New Estimate</span>
+      </a>
+
+      <a href="pages/estimates.html">
+        <span>My Estimates</span>
+      </a>
+
+      <a href="pages/admin.html">
+        <span>Admin</span>
+      </a>
+
+      <a href="pages/coverage.html">
+        <span>Coverage Map</span>
+      </a>
+
+      <a href="pages/how-it-works.html">
+        <span>How It Works</span>
+      </a>
+
+      <a href="pages/faq.html">
+        <span>FAQ</span>
+      </a>
+
+      <a href="pages/contact.html">
+        <span>Contact Us</span>
+      </a>
+
+    </nav>
+
+
+    <div class="sidebar-footer">
+      Prototype build &middot; Galaxy Backbone
+    </div>
+
+  </aside>
+
+
+  <!-- ================= MAIN WORKSPACE ================= -->
+
+  <main
+    class="workspace"
+    id="main-content"
+  >
+
+    <!-- ================= STEPPER ================= -->
+
+    <div
+      class="stepper"
+      aria-label="Estimate progress"
+    >
+
+      <div
+        class="step-item active"
+        data-step="1"
+      >
+        <div class="step-circle">1</div>
+        <div class="step-label">Location</div>
+      </div>
+
+      <div
+        class="step-item"
+        data-step="2"
+      >
+        <div class="step-circle">2</div>
+        <div class="step-label">Requirements</div>
+      </div>
+
+      <div
+        class="step-item"
+        data-step="3"
+      >
+        <div class="step-circle">3</div>
+        <div class="step-label">Estimate</div>
+      </div>
+
+      <div
+        class="step-item"
+        data-step="4"
+      >
+        <div class="step-circle">4</div>
+        <div class="step-label">Submit Request</div>
+      </div>
+
+    </div>
+
+
+    <!-- ================= STEP 1 ================= -->
+
+    <section
+      class="step-panel"
+      id="panel-1"
+    >
+
+      <div class="card">
+
+        <h1>
+          Where is your site located?
+        </h1>
+
+        <p class="muted">
+          Search or click on the map to select your site
+        </p>
+
+
+        <div
+          class="field"
+          style="margin-top:18px;"
+        >
+
+          <label for="location-search">
+            Search location
+          </label>
+
+          <div class="input-with-icon">
+
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8"/>
+              <line
+                x1="21"
+                y1="21"
+                x2="16.65"
+                y2="16.65"
+              />
+            </svg>
+
+            <input
+              type="text"
+              id="location-search"
+              placeholder="Search location..."
+              autocomplete="off"
+            />
+
+          </div>
+
+          <div
+            id="search-results"
+            style="margin-top:6px;"
+          ></div>
+
+        </div>
+
+
+        <div class="field">
+
+          <label for="coordinate-input">
+            Or enter coordinates directly
+          </label>
+
+          <input
+            type="text"
+            id="coordinate-input"
+            placeholder="e.g. 9.0765, 7.3986"
+          />
+
+          <div
+            class="field-error-msg"
+            id="coordinate-error"
+          >
+            Please enter valid coordinates.
+            Example: 9.0765, 7.3986
+          </div>
+
+        </div>
+
+
+        <div class="map-wrap">
+
+          <div id="map"></div>
+
+        </div>
+
+
+        <div class="step-actions">
+
+          <div
+            class="distance-box"
+            id="distance-box"
+            style="display:none;"
+          >
+
+            <div class="muted">
+              Estimated Fibre Distance
+            </div>
+
+            <div
+              class="value"
+              id="distance-value"
+            >
+              —
+            </div>
+
+            <div
+              class="muted"
+              style="margin-top:2px;font-size:11.5px;"
+            >
+              Straight-line distance to nearest mock GBB POP —
+              not an engineered route.
+            </div>
+
+          </div>
+
+
+          <div style="flex:1;"></div>
+
+
+          <button
+            class="btn btn-primary"
+            id="step1-continue"
+            disabled
+          >
+            Continue →
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= STEP 2 ================= -->
+
+    <section
+      class="step-panel"
+      id="panel-2"
+      style="display:none;"
+    >
+
+      <div class="card">
+
+        <h1>
+          What service do you need?
+        </h1>
+
+        <p class="muted">
+          Choose your bandwidth and equipment requirements
+        </p>
+
+
+        <!-- BANDWIDTH -->
+
+        <div
+          class="field"
+          style="margin-top:18px;"
+        >
+
+          <label>
+            Bandwidth
+          </label>
+
+          <div
+            class="pill-group"
+            id="bandwidth-pills"
+          >
+
+            <button
+              type="button"
+              class="pill"
+              data-value="10 Mbps"
+            >
+              10 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill selected"
+              data-value="20 Mbps"
+            >
+              20 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="50 Mbps"
+            >
+              50 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="100 Mbps"
+            >
+              100 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="200 Mbps"
+            >
+              200 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="500 Mbps"
+            >
+              500 Mbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="1 Gbps"
+            >
+              1 Gbps
+            </button>
+
+            <button
+              type="button"
+              class="pill"
+              data-value="Custom"
+            >
+              Custom
+            </button>
+
+          </div>
+
+
+          <div
+            class="field"
+            id="custom-bandwidth-field"
+            style="display:none;margin-top:12px;"
+          >
+
+            <label for="custom-mbps">
+              Custom bandwidth (Mbps)
+            </label>
+
+            <input
+              type="number"
+              id="custom-mbps"
+              min="1"
+              placeholder="e.g. 750"
+            />
+
+          </div>
+
+        </div>
+
+
+        <!-- RACK -->
+
+        <div class="field">
+
+          <label>
+            Rack
+          </label>
+
+          <div class="select-card-grid">
+
+            <div
+              class="select-card selected"
+              data-rack="gbb"
+            >
+
+              <svg
+                class="check-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+
+              <h3>
+                GBB to provide 12U Rack
+              </h3>
+
+              <p class="muted">
+                One-off charge
+              </p>
+
+            </div>
+
+
+            <div
+              class="select-card"
+              data-rack="own"
+            >
+
+              <svg
+                class="check-icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+
+              <h3>
+                I will provide my own rack
+              </h3>
+
+              <p class="muted">
+                No additional charge
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- STEP ACTIONS -->
+
+        <div class="step-actions">
+
+          <button
+            class="btn btn-text"
+            id="step2-back"
+            type="button"
+          >
+            ← Back
+          </button>
+
+          <button
+            class="btn btn-primary"
+            id="step2-continue"
+            type="button"
+          >
+            Continue →
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= STEP 3 ================= -->
+
+    <section
+      class="step-panel"
+      id="panel-3"
+      style="display:none;"
+    >
+
+      <div class="card">
+
+        <h1>
+          Your Estimated Cost
+        </h1>
+
+        <p class="muted">
+          Preliminary estimate based on the information provided.
+        </p>
+
+
+        <!-- NRC -->
+
+        <h3 style="margin-top:20px;">
+          Non-Recurring Charges (NRC)
+        </h3>
+
+        <div class="table-wrap">
+
+          <table class="estimate-table">
+
+            <thead>
+
+              <tr>
+                <th>Item Description</th>
+                <th>QTY</th>
+                <th>Rate (₦)</th>
+                <th>NRC (₦)</th>
+              </tr>
+
+            </thead>
+
+            <tbody id="nrc-table-body"></tbody>
+
+          </table>
+
+        </div>
+
+
+        <!-- ARC -->
+
+        <h3 style="margin-top:20px;">
+          Monthly Recurring Charges (ARC)
+        </h3>
+
+        <div class="table-wrap">
+
+          <table class="estimate-table">
+
+            <thead>
+
+              <tr>
+                <th>Item Description</th>
+                <th>QTY</th>
+                <th>Rate (₦)</th>
+                <th>ARC (₦)</th>
+              </tr>
+
+            </thead>
+
+            <tbody id="arc-table-body"></tbody>
+
+          </table>
+
+        </div>
+
+
+        <!-- SUMMARY -->
+
+        <div class="summary-grid">
+
+          <div class="summary-box">
+
+            <div class="label">
+              TOTAL NRC
+            </div>
+
+            <div
+              class="amount"
+              id="total-nrc"
+            >
+              ₦0.00
+            </div>
+
+          </div>
+
+
+          <div class="summary-box">
+
+            <div class="label">
+              TOTAL ARC (Monthly)
+            </div>
+
+            <div
+              class="amount"
+              id="total-arc"
+            >
+              ₦0.00
+            </div>
+
+          </div>
+
+
+          <div
+            class="summary-box"
+            style="grid-column:1/-1;"
+          >
+
+            <div class="label">
+              GRAND TOTAL (NRC + ARC)
+            </div>
+
+            <div
+              class="amount"
+              id="grand-total"
+            >
+              ₦0.00
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="step-actions"
+          style="gap:10px;flex-wrap:wrap;"
+        >
+
+          <button
+            class="btn btn-text"
+            id="step3-back"
+            type="button"
+          >
+            ← Back
+          </button>
+
+          <div
+            style="display:flex;gap:10px;flex-wrap:wrap;margin-left:auto;"
+          >
+
+            <button
+              class="btn btn-secondary"
+              id="export-excel-btn"
+              type="button"
+            >
+              Export to Excel
+            </button>
+
+            <button
+              class="btn btn-primary"
+              id="step3-continue"
+              type="button"
+            >
+              Continue →
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= STEP 4 ================= -->
+
+    <section
+      class="step-panel"
+      id="panel-4"
+      style="display:none;"
+    >
+
+      <div
+        class="card"
+        id="submit-form-card"
+      >
+
+        <div class="icon-circle">
+
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+
+        </div>
+
+
+        <h1>
+          What's next?
+        </h1>
+
+        <p class="muted">
+          To receive an official proposal and schedule a detailed
+          site survey, please submit your request.
+        </p>
+
+
+        <ul class="checklist">
+
+          <li>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Our team will review your request
+          </li>
+
+          <li>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            We'll contact you within 24 hours
+          </li>
+
+          <li>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Site survey will be scheduled
+          </li>
+
+        </ul>
+
+
+        <!-- CONTACT FORM -->
+
+        <form
+          id="contact-form"
+          novalidate
+        >
+
+          <h3 style="margin-top:8px;">
+            Your details
+          </h3>
+
+
+          <div
+            class="field"
+            id="field-fullName"
+          >
+
+            <label for="fullName">
+              Full name *
+            </label>
+
+            <input
+              type="text"
+              id="fullName"
+              required
+            />
+
+            <div class="field-error-msg">
+              Please enter your full name.
+            </div>
+
+          </div>
+
+
+          <div
+            class="field"
+            id="field-company"
+          >
+
+            <label for="company">
+              Company / Organization
+            </label>
+
+            <input
+              type="text"
+              id="company"
+            />
+
+          </div>
+
+
+          <div
+            class="field"
+            id="field-email"
+          >
+
+            <label for="email">
+              Email *
+            </label>
+
+            <input
+              type="email"
+              id="email"
+              required
+            />
+
+            <div class="field-error-msg">
+              Please enter a valid email address.
+            </div>
+
+          </div>
+
+
+          <div
+            class="field"
+            id="field-phone"
+          >
+
+            <label for="phone">
+              Phone number *
+            </label>
+
+            <input
+              type="tel"
+              id="phone"
+              required
+            />
+
+            <div class="field-error-msg">
+              Please enter your phone number.
+            </div>
+
+          </div>
+
+
+          <div
+            class="field"
+            id="field-siteAddress"
+          >
+
+            <label for="siteAddress">
+              Site address *
+            </label>
+
+            <input
+              type="text"
+              id="siteAddress"
+              required
+            />
+
+            <div class="field-error-msg">
+              Please enter the site address.
+            </div>
+
+          </div>
+
+
+          <div class="field">
+
+            <label for="notes">
+              Additional notes
+            </label>
+
+            <textarea
+              id="notes"
+              rows="3"
+            ></textarea>
+
+          </div>
+
+        </form>
+
+
+        <!-- REVIEW -->
+
+        <h3 style="margin-top:10px;">
+          Review your request
+        </h3>
+
+
+        <div class="review-section">
+
+          <h3
+            style="font-size:13px;color:var(--text-muted);"
+          >
+            Location
+          </h3>
+
+          <div class="review-row">
+            <span>Coordinates</span>
+            <span id="review-coords">—</span>
+          </div>
+
+          <div class="review-row">
+            <span>Estimated fibre distance</span>
+            <span id="review-distance">—</span>
+          </div>
+
+        </div>
+
+
+        <div class="review-section">
+
+          <h3
+            style="font-size:13px;color:var(--text-muted);"
+          >
+            Requirements
+          </h3>
+
+          <div class="review-row">
+            <span>Bandwidth</span>
+            <span id="review-bandwidth">—</span>
+          </div>
+
+          <div class="review-row">
+            <span>Rack</span>
+            <span id="review-rack">—</span>
+          </div>
+
+        </div>
+
+
+        <div class="review-section">
+
+          <h3
+            style="font-size:13px;color:var(--text-muted);"
+          >
+            Estimate
+          </h3>
+
+          <div class="review-row">
+            <span>Total NRC</span>
+            <span id="review-nrc">—</span>
+          </div>
+
+          <div class="review-row">
+            <span>Total ARC (monthly)</span>
+            <span id="review-arc">—</span>
+          </div>
+
+        </div>
+
+
+        <div class="step-actions">
+
+          <button
+            class="btn btn-text"
+            id="step4-back"
+            type="button"
+          >
+            ← Back
+          </button>
+
+          <button
+            class="btn btn-primary"
+            id="submit-request-btn"
+            type="button"
+          >
+
+            <span id="submit-btn-label">
+              Submit Request →
+            </span>
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- SUCCESS -->
+
+      <div
+        class="card success-wrap"
+        id="success-card"
+        style="display:none;"
+      >
+
+        <div class="success-icon">
+
+          <svg
+            width="34"
+            height="34"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+
+        </div>
+
+        <h1>
+          Request submitted successfully.
+        </h1>
+
+        <p class="muted">
+          Our team will be in touch within 24 hours
+          to schedule your site survey.
+        </p>
+
+        <div
+          class="reference-badge"
+          id="success-reference"
+        >
+          GBB-2026-000000
+        </div>
+
+
+        <div
+          class="step-actions"
+          style="justify-content:center;gap:12px;margin-top:26px;"
+        >
+
+          <button
+            class="btn btn-secondary"
+            id="download-pdf-btn"
+            type="button"
+          >
+            Download PDF
+          </button>
+
+          <a
+            class="btn btn-primary"
+            href="pages/estimates.html"
+          >
+            View My Estimates
+          </a>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<script src="js/app.js"></script>
+
+<script src="js/location.js"></script>
+
+<script src="js/estimator.js"></script>
+
+<script src="js/pdf.js"></script>
+
+
+<script>
+
+/* ============================================
+   New Estimate page controller
+   ============================================ */
+
+
+const draft = {
+
+  lat: null,
+  lng: null,
+  distanceMetres: null,
+  nearestPopName: null,
+
+  bandwidth: '20 Mbps',
+  customMbps: null,
+
+  providesOwnRack: false
+
+};
+
+
+let lastCalc = null;
+
+
+/* ============================================
+   STEP NAVIGATION
+   ============================================ */
+
+function goToStep(n) {
+
+  document
+    .querySelectorAll('.step-panel')
+    .forEach(p => {
+      p.style.display = 'none';
+    });
+
+  document
+    .getElementById(`panel-${n}`)
+    .style.display = 'block';
+
+
+  document
+    .querySelectorAll('.step-item')
+    .forEach(item => {
+
+      const step =
+        Number(item.dataset.step);
+
+      item.classList.toggle(
+        'active',
+        step === n
+      );
+
+      item.classList.toggle(
+        'completed',
+        step < n
+      );
+
+    });
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+
+}
+
+
+/* ============================================
+   STEP 1 — LOCATION
+   ============================================ */
+
+const picker =
+  createLocationPicker('map', {
+
+    onLocationChange:
+      ({
+        lat,
+        lng,
+        nearestPop,
+        distanceMetres
+      }) => {
+
+        draft.lat = lat;
+        draft.lng = lng;
+        draft.distanceMetres =
+          distanceMetres;
+
+        draft.nearestPopName =
+          nearestPop.name;
+
+
+        const km =
+          (distanceMetres / 1000)
+            .toFixed(2);
+
+
+        document
+          .getElementById('distance-value')
+          .textContent =
+            `${km} km (${Math.round(distanceMetres)} m)`;
+
+
+        document
+          .getElementById('distance-box')
+          .style.display = 'block';
+
+
+        document
+          .getElementById('step1-continue')
+          .disabled = false;
+
+      }
+
+  });
+
+
+/* Coordinate input */
+
+document
+  .getElementById('coordinate-input')
+  .addEventListener('change', e => {
+
+    const coords =
+      parseCoordinateInput(e.target.value);
+
+    const field =
+      e.target.closest('.field');
+
+
+    if (!coords) {
+
+      field.classList.add('error');
+
+      return;
+    }
+
+
+    field.classList.remove('error');
+
+
+    picker.setCustomerMarker(
+      coords.lat,
+      coords.lng
+    );
+
+  });
+
+
+/* Location search */
+
+let searchDebounce;
+
+
+document
+  .getElementById('location-search')
+  .addEventListener('input', e => {
+
+    clearTimeout(searchDebounce);
+
+
+    const q =
+      e.target.value.trim();
+
+
+    const resultsBox =
+      document.getElementById(
+        'search-results'
+      );
+
+
+    if (q.length < 3) {
+
+      resultsBox.innerHTML = '';
+
+      return;
+    }
+
+
+    searchDebounce =
+      setTimeout(async () => {
+
+        try {
+
+          const results =
+            await searchLocationText(q);
+
+
+          resultsBox.innerHTML =
+            results
+              .map((r, i) => `
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  style="
+                    display:block;
+                    width:100%;
+                    text-align:left;
+                    margin-bottom:6px;
+                    font-weight:400;
+                  "
+                  data-lat="${r.lat}"
+                  data-lng="${r.lng}"
+                >
+                  ${r.label}
+                </button>
+
+              `)
+              .join('');
+
+
+          resultsBox
+            .querySelectorAll('button')
+            .forEach(btn => {
+
+              btn.addEventListener(
+                'click',
+                () => {
+
+                  picker.setCustomerMarker(
+                    Number(btn.dataset.lat),
+                    Number(btn.dataset.lng)
+                  );
+
+
+                  resultsBox.innerHTML = '';
+
+
+                  document
+                    .getElementById(
+                      'location-search'
+                    )
+                    .value =
+                      btn.textContent.trim();
+
+                }
+              );
+
+            });
+
+
+        } catch (err) {
+
+          resultsBox.innerHTML =
+            '<p class="muted">' +
+            'Search unavailable right now — ' +
+            'try coordinates or the map instead.' +
+            '</p>';
+
+        }
+
+      }, 400);
+
+  });
+
+
+document
+  .getElementById('step1-continue')
+  .addEventListener(
+    'click',
+    () => goToStep(2)
+  );
+
+
+/* ============================================
+   STEP 2 — REQUIREMENTS
+   ============================================ */
+
+
+/* Bandwidth */
+
+document
+  .getElementById('bandwidth-pills')
+  .addEventListener('click', e => {
+
+    const pill =
+      e.target.closest('.pill');
+
+
+    if (!pill) {
+      return;
+    }
+
+
+    document
+      .querySelectorAll(
+        '#bandwidth-pills .pill'
+      )
+      .forEach(p => {
+
+        p.classList.remove('selected');
+
+      });
+
+
+    pill.classList.add('selected');
+
+
+    draft.bandwidth =
+      pill.dataset.value;
+
+
+    document
+      .getElementById(
+        'custom-bandwidth-field'
+      )
+      .style.display =
+        draft.bandwidth === 'Custom'
+          ? 'block'
+          : 'none';
+
+  });
+
+
+/* Custom bandwidth */
+
+document
+  .getElementById('custom-mbps')
+  .addEventListener('input', e => {
+
+    draft.customMbps =
+      e.target.value;
+
+  });
+
+
+/* Rack */
+
+document
+  .querySelectorAll(
+    '.select-card[data-rack]'
+  )
+  .forEach(card => {
+
+    card.addEventListener(
+      'click',
+      () => {
+
+        document
+          .querySelectorAll(
+            '.select-card[data-rack]'
+          )
+          .forEach(c => {
+
+            c.classList.remove(
+              'selected'
+            );
+
+          });
+
+
+        card.classList.add('selected');
+
+
+        draft.providesOwnRack =
+          card.dataset.rack === 'own';
+
+      }
+    );
+
+  });
+
+
+document
+  .getElementById('step2-back')
+  .addEventListener(
+    'click',
+    () => goToStep(1)
+  );
+
+
+document
+  .getElementById('step2-continue')
+  .addEventListener(
+    'click',
+    () => {
+
+      if (
+        draft.bandwidth === 'Custom' &&
+        (!draft.customMbps ||
+         Number(draft.customMbps) < 1)
+      ) {
+
+        alert(
+          'Please enter a valid custom bandwidth.'
+        );
+
+        document
+          .getElementById('custom-mbps')
+          .focus();
+
+        return;
+      }
+
+
+      renderEstimate();
+
+      goToStep(3);
+
+    }
+  );
+
+
+/* ============================================
+   STEP 3 — ESTIMATE
+   ============================================ */
+
+function renderEstimate() {
+
+  try {
+
+    lastCalc =
+      calculateEstimate(draft);
+
+
+    const nrcBody =
+      document.getElementById(
+        'nrc-table-body'
+      );
+
+
+    const arcBody =
+      document.getElementById(
+        'arc-table-body'
+      );
+
+
+    nrcBody.innerHTML =
+      lastCalc.nrcRows.length
+
+        ? lastCalc.nrcRows
+            .map(r => `
+
+              <tr>
+
+                <td>
+                  ${r.description}
+                </td>
+
+                <td>
+                  ${r.qty}
+                </td>
+
+                <td>
+                  ${formatNairaWhole(r.rate)}
+                  ${r.unit === 'm' ? '/m' : ''}
+                </td>
+
+                <td>
+                  ${formatNairaWhole(r.amount)}
+                </td>
+
+              </tr>
+
+            `)
+            .join('')
+
+        : `
+          <tr>
+            <td
+              colspan="4"
+              class="muted"
+            >
+              No non-recurring charges.
+            </td>
+          </tr>
+        `;
+
+
+    arcBody.innerHTML =
+      lastCalc.arcRows.length
+
+        ? lastCalc.arcRows
+            .map(r => `
+
+              <tr>
+
+                <td>
+                  ${r.description}
+                </td>
+
+                <td>
+                  ${r.qty}
+                </td>
+
+                <td>
+                  ${formatNairaWhole(r.rate)}
+                  ${r.unit === 'Mbps' ? '/Mbps' : ''}
+                </td>
+
+                <td>
+                  ${formatNairaWhole(r.amount)}
+                </td>
+
+              </tr>
+
+            `)
+            .join('')
+
+        : `
+          <tr>
+            <td
+              colspan="4"
+              class="muted"
+            >
+              No recurring charges.
+            </td>
+          </tr>
+        `;
+
+
+    document
+      .getElementById('total-nrc')
+      .textContent =
+        formatNaira(
+          lastCalc.totalNRC
+        );
+
+
+    document
+      .getElementById('total-arc')
+      .textContent =
+        formatNaira(
+          lastCalc.totalARC
+        );
+
+
+    document
+      .getElementById('grand-total')
+      .textContent =
+        formatNaira(
+          lastCalc.grandTotal
+        );
+
+
+    /* Keep rack price synced with admin */
+
+    const rackCard =
+      document.querySelector(
+        '.select-card[data-rack="gbb"] .muted'
+      );
+
+
+    if (rackCard) {
+
+      rackCard.textContent =
+        `${formatNairaWhole(
+          getPricingConfig()
+            .items.rack.rate
+        )} one-off`;
+
+    }
+
+
+  } catch (error) {
+
+    console.error(
+      'Estimate rendering failed:',
+      error
+    );
+
+
+    alert(
+      'The estimate could not be generated. ' +
+      'Please refresh the page and try again.'
+    );
+
+
+    throw error;
+
+  }
+
+}
+
+
+document
+  .getElementById('step3-back')
+  .addEventListener(
+    'click',
+    () => goToStep(2)
+  );
+
+
+document
+  .getElementById('step3-continue')
+  .addEventListener(
+    'click',
+    () => {
+
+      renderReview();
+
+      goToStep(4);
+
+    }
+  );
+
+
+/* ============================================
+   EXCEL EXPORT
+   ============================================ */
+
+function exportEstimateToExcel() {
+
+  if (!lastCalc) {
+
+    renderEstimate();
+
+  }
+
+
+  if (typeof XLSX === 'undefined') {
+
+    alert(
+      'Excel export library is unavailable. ' +
+      'Check your internet connection and try again.'
+    );
+
+    return;
+  }
+
+
+  const rows = [
+
+    [
+      'S/N',
+      'Item Description',
+      'QTY',
+      'Rate',
+      'NRC',
+      'ARC'
+    ],
+
+    [
+      '',
+      'One-Off',
+      '',
+      '',
+      '',
+      ''
+    ]
+
+  ];
+
+
+  let sn = 1;
+
+
+  lastCalc.nrcRows.forEach(r => {
+
+    rows.push([
+      sn++,
+      r.description,
+      r.qty,
+      Number(r.rate),
+      Number(r.amount),
+      ''
+    ]);
+
+  });
+
+
+  rows.push([
+    '',
+    'Recurring',
+    '',
+    '',
+    '',
+    ''
+  ]);
+
+
+  lastCalc.arcRows.forEach(r => {
+
+    rows.push([
+      sn++,
+      r.description,
+      r.qty,
+      Number(r.rate),
+      '',
+      Number(r.amount)
+    ]);
+
+  });
+
+
+  rows.push([
+    '',
+    'Total NRC',
+    '',
+    '',
+    Number(lastCalc.totalNRC),
+    ''
+  ]);
+
+
+  rows.push([
+    '',
+    'Total ARC',
+    '',
+    '',
+    '',
+    Number(lastCalc.totalARC)
+  ]);
+
+
+  rows.push([
+    '',
+    'Grand Total (NRC + ARC)',
+    '',
+    '',
+    '',
+    Number(lastCalc.grandTotal)
+  ]);
+
+
+  const ws =
+    XLSX.utils.aoa_to_sheet(rows);
+
+
+  ws['!cols'] = [
+
+    { wch: 8 },
+    { wch: 48 },
+    { wch: 10 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 16 }
+
+  ];
+
+
+  const sectionRows = [
+    2,
+    2 + lastCalc.nrcRows.length + 1
+  ];
+
+
+  sectionRows.forEach(r => {
+
+    const cell =
+      ws[
+        XLSX.utils.encode_cell({
+          r: r - 1,
+          c: 1
+        })
+      ];
+
+
+    if (cell) {
+
+      cell.s = {
+        font: {
+          bold: true
+        }
+      };
+
+    }
+
+  });
+
+
+  [
+    rows.length - 3,
+    rows.length - 2,
+    rows.length - 1
+  ].forEach(r => {
+
+    const cell =
+      ws[
+        XLSX.utils.encode_cell({
+          r: r - 1,
+          c: 1
+        })
+      ];
+
+
+    if (cell) {
+
+      cell.s = {
+        font: {
+          bold: true
+        }
+      };
+
+    }
+
+  });
+
+
+  const wb =
+    XLSX.utils.book_new();
+
+
+  XLSX.utils.book_append_sheet(
+    wb,
+    ws,
+    'BOQ'
+  );
+
+
+  XLSX.writeFile(
+    wb,
+    `GBB-BOQ-${
+      new Date()
+        .toISOString()
+        .slice(0, 10)
+    }.xlsx`
+  );
+
+}
+
+
+document
+  .getElementById('export-excel-btn')
+  .addEventListener(
+    'click',
+    exportEstimateToExcel
+  );
+
+
+/* ============================================
+   STEP 4 — REVIEW
+   ============================================ */
+
+function renderReview() {
+
+  document
+    .getElementById('review-coords')
+    .textContent =
+      `${draft.lat.toFixed(5)}, ${
+        draft.lng.toFixed(5)
+      }`;
+
+
+  document
+    .getElementById('review-distance')
+    .textContent =
+      `${(
+        draft.distanceMetres / 1000
+      ).toFixed(2)} km`;
+
+
+  document
+    .getElementById('review-bandwidth')
+    .textContent =
+      lastCalc.bandwidthLabel;
+
+
+  document
+    .getElementById('review-rack')
+    .textContent =
+      draft.providesOwnRack
+        ? 'Customer-provided'
+        : 'GBB to provide 12U Rack';
+
+
+  document
+    .getElementById('review-nrc')
+    .textContent =
+      formatNaira(
+        lastCalc.totalNRC
+      );
+
+
+  document
+    .getElementById('review-arc')
+    .textContent =
+      formatNaira(
+        lastCalc.totalARC
+      );
+
+}
+
+
+document
+  .getElementById('step4-back')
+  .addEventListener(
+    'click',
+    () => goToStep(3)
+  );
+
+
+/* ============================================
+   FORM VALIDATION
+   ============================================ */
+
+function validateContactForm() {
+
+  const required = [
+    'fullName',
+    'email',
+    'phone',
+    'siteAddress'
+  ];
+
+
+  let valid = true;
+
+
+  required.forEach(id => {
+
+    const input =
+      document.getElementById(id);
+
+
+    const field =
+      document.getElementById(
+        `field-${id}`
+      );
+
+
+    let ok =
+      input.value.trim().length > 0;
+
+
+    if (
+      id === 'email' &&
+      ok
+    ) {
+
+      ok =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          .test(
+            input.value.trim()
+          );
+
+    }
+
+
+    field.classList.toggle(
+      'error',
+      !ok
+    );
+
+
+    if (!ok) {
+
+      valid = false;
+
+    }
+
+  });
+
+
+  return valid;
+
+}
+
+
+/* ============================================
+   SUBMISSION
+   ============================================ */
+
+let submittedEstimate = null;
+
+
+document
+  .getElementById('submit-request-btn')
+  .addEventListener(
+    'click',
+    () => {
+
+      if (!validateContactForm()) {
+
+        return;
+
+      }
+
+
+      const btn =
+        document.getElementById(
+          'submit-request-btn'
+        );
+
+
+      const label =
+        document.getElementById(
+          'submit-btn-label'
+        );
+
+
+      btn.disabled = true;
+
+
+      label.innerHTML =
+        '<span class="spinner"></span> ' +
+        'Submitting...';
+
+
+      setTimeout(() => {
+
+        const reference =
+          generateReference();
+
+
+        submittedEstimate = {
+
+          reference,
+
+          date:
+            new Date()
+              .toLocaleDateString(
+                'en-NG',
+                {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                }
+              ),
+
+          status:
+            'Pending Review',
+
+
+          customer: {
+
+            fullName:
+              document
+                .getElementById('fullName')
+                .value
+                .trim(),
+
+            company:
+              document
+                .getElementById('company')
+                .value
+                .trim(),
+
+            email:
+              document
+                .getElementById('email')
+                .value
+                .trim(),
+
+            phone:
+              document
+                .getElementById('phone')
+                .value
+                .trim(),
+
+            siteAddress:
+              document
+                .getElementById('siteAddress')
+                .value
+                .trim(),
+
+            notes:
+              document
+                .getElementById('notes')
+                .value
+                .trim()
+
+          },
+
+
+          location: {
+
+            lat: draft.lat,
+            lng: draft.lng,
+
+            distanceMetres:
+              draft.distanceMetres,
+
+            nearestPopName:
+              draft.nearestPopName
+
+          },
+
+
+          requirements: {
+
+            bandwidthLabel:
+              lastCalc.bandwidthLabel,
+
+            bandwidthMbps:
+              lastCalc.bandwidthMbps,
+
+            providesOwnRack:
+              draft.providesOwnRack
+
+          },
+
+
+          calc:
+            lastCalc
+
+        };
+
+
+        saveEstimate(
+          submittedEstimate
+        );
+
+
+        document
+          .getElementById(
+            'submit-form-card'
+          )
+          .style.display = 'none';
+
+
+        document
+          .getElementById(
+            'success-card'
+          )
+          .style.display = 'block';
+
+
+        document
+          .getElementById(
+            'success-reference'
+          )
+          .textContent =
+            reference;
+
+
+        btn.disabled = false;
+
+
+        label.textContent =
+          'Submit Request →';
+
+
+      }, 900);
+
+    }
+  );
+
+
+/* ============================================
+   PDF
+   ============================================ */
+
+document
+  .getElementById('download-pdf-btn')
+  .addEventListener(
+    'click',
+    () => {
+
+      if (submittedEstimate) {
+
+        generateEstimatePDF(
+          submittedEstimate
+        );
+
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>

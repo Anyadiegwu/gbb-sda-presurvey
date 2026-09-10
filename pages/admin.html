@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+  Admin — GBB Fiber Estimator
+</title>
+
+<link
+  rel="preconnect"
+  href="https://fonts.googleapis.com"
+>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+>
+
+<link
+  rel="stylesheet"
+  href="../css/style.css"
+/>
+
+<link
+  rel="stylesheet"
+  href="../css/responsive.css"
+/>
+
+<style>
+
+.admin-grid {
+  display: grid;
+  gap: 18px;
+}
+
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+
+.admin-table th,
+.admin-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+
+.admin-table th {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+
+.admin-table input,
+.admin-table select {
+  width: 100%;
+  min-width: 120px;
+}
+
+
+.admin-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+
+.admin-note {
+  padding: 12px 14px;
+  background: var(--emerald-light);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+
+.admin-section-title {
+  margin: 0 0 12px;
+}
+
+
+.bandwidth-rate-box {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-top: 14px;
+}
+
+
+.bandwidth-rate-box label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+
+.bandwidth-rate-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.bandwidth-rate-input span {
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+
+.bandwidth-rate-input input {
+  flex: 1;
+}
+
+
+.calculation-example {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--bg-soft, #f7f9f8);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+.danger {
+  color: #b42318;
+}
+
+
+/* ============================================
+   NETWORK DATA
+   ============================================ */
+
+.kmz-import-box {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-top: 14px;
+}
+
+
+.kmz-import-box label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+
+.kmz-import-box input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+
+/* ============================================
+   ADD ITEM
+   ============================================ */
+
+.add-item-box {
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--bg-soft, #f7f9f8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+
+.add-item-grid {
+  display: grid;
+  grid-template-columns:
+    1.2fr
+    1fr
+    1fr
+    1.5fr
+    auto;
+
+  gap: 10px;
+  align-items: end;
+}
+
+
+.add-item-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+
+.add-item-field input,
+.add-item-field select {
+  width: 100%;
+  min-width: 0;
+}
+
+
+.custom-item-delete {
+  white-space: nowrap;
+}
+
+
+.custom-item-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+
+@media(max-width:900px) {
+
+  .add-item-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .add-item-grid .add-item-button {
+    grid-column: 1 / -1;
+  }
+
+}
+
+
+@media(max-width:700px) {
+
+  .admin-actions {
+    justify-content: stretch;
+  }
+
+  .admin-actions .btn {
+    flex: 1;
+  }
+
+
+  .add-item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-item-grid .add-item-button {
+    grid-column: auto;
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<a
+href="#main-content"
+class="skip-link"
+
+>
+
+Skip to content </a>
+
+<!-- ================= MOBILE TOPBAR ================= -->
+
+<div class="mobile-topbar">
+
+  <span class="logo-text">
+    GBB Fiber Estimator
+  </span>
+
+<button
+class="hamburger-btn"
+aria-label="Open navigation"
+aria-expanded="false"
+
+>
+
+
+<svg
+  width="24"
+  height="24"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+>
+
+  <line
+    x1="3"
+    y1="6"
+    x2="21"
+    y2="6"
+  />
+
+  <line
+    x1="3"
+    y1="12"
+    x2="21"
+    y2="12"
+  />
+
+  <line
+    x1="3"
+    y1="18"
+    x2="21"
+    y2="18"
+  />
+
+</svg>
+
+  </button>
+
+</div>
+
+<div class="nav-overlay"></div>
+
+<div class="app-shell">
+
+<!-- ================= SIDEBAR ================= -->
+
+<aside
+  class="sidebar mobile-drawer"
+  id="sidebar"
+>
+
+  <div class="sidebar-logo">
+
+
+<svg
+  class="logo-icon"
+  viewBox="0 0 34 34"
+  fill="none"
+>
+
+  <circle
+    cx="17"
+    cy="17"
+    r="15"
+    stroke="white"
+    stroke-width="2"
+  />
+
+  <circle
+    cx="17"
+    cy="17"
+    r="9"
+    stroke="white"
+    stroke-width="2"
+  />
+
+  <circle
+    cx="17"
+    cy="17"
+    r="3"
+    fill="white"
+  />
+
+</svg>
+
+
+<span class="logo-text">
+  GBB Fiber<br/>Estimator
+</span>
+
+  </div>
+
+<a
+href="../index.html"
+class="new-estimate-btn"
+
+>
+
+<span>
+  + New Estimate
+</span>
+
+  </a>
+
+  <div class="sidebar-footer">
+    Prototype build &middot; Galaxy Backbone
+  </div>
+
+</aside>
+
+<!-- ================= MAIN ================= -->
+
+<main
+  class="workspace"
+  id="main-content"
+>
+
+  <div class="page-header">
+
+
+<h1>
+  BOQ Pricing Admin
+</h1>
+
+<p class="muted">
+  Set the prototype rates and choose whether each item
+  is One-Off (NRC) or Recurring (ARC).
+</p>
+
+  </div>
+
+  <div class="admin-grid">
+
+
+<!-- ================= BOQ ITEMS ================= -->
+
+<div class="card">
+
+  <h2 class="admin-section-title">
+    BOQ Items
+  </h2>
+
+
+  <div class="admin-table-wrap">
+
+    <table class="admin-table">
+
+      <thead>
+
+        <tr>
+
+          <th>
+            Item
+          </th>
+
+          <th>
+            Rate
+          </th>
+
+          <th>
+            Charge Type
+          </th>
+
+          <th>
+            Description
+          </th>
+
+          <th>
+            Unit
+          </th>
+
+        </tr>
+
+      </thead>
+
+
+      <tbody>
+
+
+        <!-- FIBRE -->
+
+        <tr>
+
+          <td>
+            Fiber last mile
+          </td>
+
+          <td>
+
+            <input
+              id="fibre-rate"
+              type="number"
+              min="0"
+              step="1"
+            >
+
+          </td>
+
+
+          <td>
+
+            <select id="fibre-type">
+
+              <option value="One-Off">
+                One-Off
+              </option>
+
+              <option value="Recurring">
+                Recurring
+              </option>
+
+            </select>
+
+          </td>
+
+
+          <td>
+
+            <input
+              id="fibre-description"
+              type="text"
+            >
+
+          </td>
+
+
+          <td>
+            m
+          </td>
+
+        </tr>
+
+
+        <!-- RACK -->
+
+        <tr>
+
+          <td>
+            12U Rack
+          </td>
+
+
+          <td>
+
+            <input
+              id="rack-rate"
+              type="number"
+              min="0"
+              step="1"
+            >
+
+          </td>
+
+
+          <td>
+
+            <select id="rack-type">
+
+              <option value="One-Off">
+                One-Off
+              </option>
+
+              <option value="Recurring">
+                Recurring
+              </option>
+
+            </select>
+
+          </td>
+
+
+          <td>
+
+            <input
+              id="rack-description"
+              type="text"
+            >
+
+          </td>
+
+
+          <td>
+            each
+          </td>
+
+        </tr>
+
+
+        <!-- ROUTER -->
+
+        <tr>
+
+          <td>
+            Huawei AR611W Router
+          </td>
+
+
+          <td>
+
+            <input
+              id="router-rate"
+              type="number"
+              min="0"
+              step="1"
+            >
+
+          </td>
+
+
+          <td>
+
+            <select id="router-type">
+
+              <option value="One-Off">
+                One-Off
+              </option>
+
+              <option value="Recurring">
+                Recurring
+              </option>
+
+            </select>
+
+          </td>
+
+
+          <td>
+
+            <input
+              id="router-description"
+              type="text"
+            >
+
+          </td>
+
+
+          <td>
+            each
+          </td>
+
+        </tr>
+
+
+        <!-- CUSTOM ITEMS -->
+
+        <tbody id="custom-items-body"></tbody>
+
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+
+  <!-- ================= ADD NEW ITEM ================= -->
+
+  <div class="add-item-box">
+
+    <strong>
+      Add New BOQ Item
+    </strong>
+
+    <p
+      class="muted"
+      style="
+        font-size:13px;
+        margin:6px 0 14px;
+      "
+    >
+      Add an additional item that can be configured
+      by the administrator.
+    </p>
+
+
+    <div class="add-item-grid">
+
+
+      <div class="add-item-field">
+
+        <label for="new-item-name">
+          Item Name
+        </label>
+
+        <input
+          id="new-item-name"
+          type="text"
+          placeholder="e.g. Installation"
+        >
+
+      </div>
+
+
+      <div class="add-item-field">
+
+        <label for="new-item-rate">
+          Rate
+        </label>
+
+        <input
+          id="new-item-rate"
+          type="number"
+          min="0"
+          step="1"
+          placeholder="0"
+        >
+
+      </div>
+
+
+      <div class="add-item-field">
+
+        <label for="new-item-type">
+          Charge Type
+        </label>
+
+        <select id="new-item-type">
+
+          <option value="One-Off">
+            One-Off
+          </option>
+
+          <option value="Recurring">
+            Recurring
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="add-item-field">
+
+        <label for="new-item-description">
+          Description
+        </label>
+
+        <input
+          id="new-item-description"
+          type="text"
+          placeholder="Item description"
+        >
+
+      </div>
+
+
+      <div class="add-item-field">
+
+        <label for="new-item-unit">
+          Unit
+        </label>
+
+        <input
+          id="new-item-unit"
+          type="text"
+          placeholder="each"
+        >
+
+      </div>
+
+
+      <div class="add-item-button">
+
+        <button
+          class="btn btn-primary"
+          id="add-item"
+          type="button"
+        >
+          + Add Item
+        </button>
+
+      </div>
+
+
+    </div>
+
+  </div>
+
+
+  <p
+    class="muted"
+    style="
+      font-size:12px;
+      margin-top:12px;
+    "
+  >
+    One-Off items contribute to NRC.
+    Recurring items contribute to ARC.
+  </p>
+
+</div>
+
+
+<!-- ================= NETWORK DATA ================= -->
+
+<div class="card">
+
+  <h2 class="admin-section-title">
+    Network Data
+  </h2>
+
+
+  <p
+    class="muted"
+    style="font-size:13px;"
+  >
+    Import the latest GBB fibre network KMZ data
+    containing usable manholes and FDTs.
+  </p>
+
+
+  <div class="kmz-import-box">
+
+    <label for="kmz-file">
+      KMZ Network File
+    </label>
+
+
+    <input
+      id="kmz-file"
+      type="file"
+      accept=".kmz"
+    />
+
+
+    <button
+      class="btn btn-primary"
+      id="import-kmz"
+      type="button"
+    >
+      Import KMZ Data
+    </button>
+
+
+    <p
+      id="kmz-message"
+      class="muted"
+      style="
+        margin:10px 0 0;
+        font-size:12px;
+      "
+    ></p>
+
+  </div>
+
+
+  <p
+    class="muted"
+    style="
+      font-size:12px;
+      margin-top:12px;
+    "
+  >
+    The KMZ import button is currently a placeholder
+    for backend integration. It does not process or
+    upload the file yet.
+  </p>
+
+</div>
+
+
+<!-- ================= BANDWIDTH ================= -->
+
+<div class="card">
+
+  <h2 class="admin-section-title">
+    Bandwidth Pricing
+  </h2>
+
+
+  <p
+    class="muted"
+    style="font-size:13px;"
+  >
+    Set one price per Mbps. The estimator automatically
+    multiplies this rate by the customer's selected
+    bandwidth.
+  </p>
+
+
+  <div class="bandwidth-rate-box">
+
+    <label for="bandwidth-rate">
+      Price per Mbps
+    </label>
+
+
+    <div class="bandwidth-rate-input">
+
+      <span>
+        ₦
+      </span>
+
+
+      <input
+        id="bandwidth-rate"
+        type="number"
+        min="0"
+        step="1"
+        placeholder="25000"
+      />
+
+
+      <span>
+        / Mbps
+      </span>
+
+    </div>
+
+
+    <div class="calculation-example">
+
+      <strong>
+        Automatic calculation
+      </strong>
+
+      <br>
+
+      10 Mbps =
+      <span id="example-10">
+        ₦0
+      </span>
+
+      <br>
+
+      20 Mbps =
+      <span id="example-20">
+        ₦0
+      </span>
+
+      <br>
+
+      50 Mbps =
+      <span id="example-50">
+        ₦0
+      </span>
+
+      <br>
+
+      100 Mbps =
+      <span id="example-100">
+        ₦0
+      </span>
+
+      <br>
+
+      1 Gbps =
+      <span id="example-1000">
+        ₦0
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <div class="field">
+
+    <label for="bandwidth-type">
+      Bandwidth charge type
+    </label>
+
+
+    <select
+      id="bandwidth-type"
+      style="
+        width:100%;
+        border:1px solid var(--border);
+        border-radius:var(--radius-sm);
+        padding:11px 14px;
+        font-size:14px;
+      "
+    >
+
+      <option value="One-Off">
+        One-Off
+      </option>
+
+      <option
+        value="Recurring"
+        selected
+      >
+        Recurring
+      </option>
+
+    </select>
+
+  </div>
+
+
+  <div class="admin-actions">
+
+    <button
+      class="btn btn-secondary"
+      id="reset-pricing"
+      type="button"
+    >
+      Reset Defaults
+    </button>
+
+
+    <button
+      class="btn btn-primary"
+      id="save-pricing"
+      type="button"
+    >
+      Save Pricing
+    </button>
+
+  </div>
+
+
+  <p
+    id="save-message"
+    class="muted"
+    style="
+      margin:10px 0 0;
+      text-align:right;
+    "
+  ></p>
+
+</div>
+
+  </div>
+
+</main>
+
+</div>
+
+<script src="../js/app.js"></script>
+
+<script src="../js/estimator.js"></script>
+
+<script>
+
+/* ============================================
+   ADMIN CONTROLLER
+   ============================================ */
+
+
+/* ============================================
+   CUSTOM ITEMS STORAGE
+   ============================================ */
+
+const CUSTOM_ITEMS_KEY =
+  'gbb_custom_boq_items';
+
+
+function getCustomItems() {
+
+  try {
+
+    return JSON.parse(
+      localStorage.getItem(
+        CUSTOM_ITEMS_KEY
+      ) || '[]'
+    );
+
+  } catch (error) {
+
+    return [];
+
+  }
+
+}
+
+
+function saveCustomItems(items) {
+
+  localStorage.setItem(
+    CUSTOM_ITEMS_KEY,
+    JSON.stringify(items)
+  );
+
+}
+
+
+/* ============================================
+   RENDER CUSTOM ITEMS
+   ============================================ */
+
+function renderCustomItems() {
+
+  const body =
+    document.getElementById(
+      'custom-items-body'
+    );
+
+
+  body.innerHTML = '';
+
+
+  const items =
+    getCustomItems();
+
+
+  if (!items.length) {
+    return;
+  }
+
+
+  items.forEach((item, index) => {
+
+    const row =
+      document.createElement('tr');
+
+
+    row.innerHTML = `
+
+      <td>
+        ${escapeHtml(item.name)}
+      </td>
+
+      <td>
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value="${Number(item.rate) || 0}"
+          data-custom-rate="${index}"
+        >
+
+      </td>
+
+      <td>
+
+        <select
+          data-custom-type="${index}"
+        >
+
+          <option
+            value="One-Off"
+            ${item.type === 'One-Off' ? 'selected' : ''}
+          >
+            One-Off
+          </option>
+
+          <option
+            value="Recurring"
+            ${item.type === 'Recurring' ? 'selected' : ''}
+          >
+            Recurring
+          </option>
+
+        </select>
+
+      </td>
+
+      <td>
+
+        <input
+          type="text"
+          value="${escapeAttribute(item.description || '')}"
+          data-custom-description="${index}"
+        >
+
+      </td>
+
+      <td>
+
+        <input
+          type="text"
+          value="${escapeAttribute(item.unit || 'each')}"
+          data-custom-unit="${index}"
+        >
+
+      </td>
+
+      <td>
+
+        <button
+          type="button"
+          class="btn btn-secondary custom-item-delete"
+          data-delete-item="${index}"
+        >
+          Remove
+        </button>
+
+      </td>
+
+    `;
+
+
+    body.appendChild(row);
+
+  });
+
+
+  body
+    .querySelectorAll('[data-delete-item]')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          const index =
+            Number(
+              button.dataset.deleteItem
+            );
+
+
+          const items =
+            getCustomItems();
+
+
+          items.splice(index, 1);
+
+
+          saveCustomItems(items);
+
+          renderCustomItems();
+
+        }
+      );
+
+    });
+
+
+  body
+    .querySelectorAll('[data-custom-rate]')
+    .forEach(input => {
+
+      input.addEventListener(
+        'change',
+        () => {
+
+          const index =
+            Number(
+              input.dataset.customRate
+            );
+
+
+          const items =
+            getCustomItems();
+
+
+          items[index].rate =
+            Number(input.value) || 0;
+
+
+          saveCustomItems(items);
+
+        }
+      );
+
+    });
+
+
+  body
+    .querySelectorAll('[data-custom-type]')
+    .forEach(select => {
+
+      select.addEventListener(
+        'change',
+        () => {
+
+          const index =
+            Number(
+              select.dataset.customType
+            );
+
+
+          const items =
+            getCustomItems();
+
+
+          items[index].type =
+            select.value;
+
+
+          saveCustomItems(items);
+
+        }
+      );
+
+    });
+
+
+  body
+    .querySelectorAll('[data-custom-description]')
+    .forEach(input => {
+
+      input.addEventListener(
+        'change',
+        () => {
+
+          const index =
+            Number(
+              input.dataset.customDescription
+            );
+
+
+          const items =
+            getCustomItems();
+
+
+          items[index].description =
+            input.value.trim();
+
+
+          saveCustomItems(items);
+
+        }
+      );
+
+    });
+
+
+  body
+    .querySelectorAll('[data-custom-unit]')
+    .forEach(input => {
+
+      input.addEventListener(
+        'change',
+        () => {
+
+          const index =
+            Number(
+              input.dataset.customUnit
+            );
+
+
+          const items =
+            getCustomItems();
+
+
+          items[index].unit =
+            input.value.trim() || 'each';
+
+
+          saveCustomItems(items);
+
+        }
+      );
+
+    });
+
+}
+
+
+/* ============================================
+   BASIC HTML ESCAPING
+   ============================================ */
+
+function escapeHtml(value) {
+
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+}
+
+
+function escapeAttribute(value) {
+
+  return escapeHtml(value);
+
+}
+
+
+/* ============================================
+   LOAD ADMIN SETTINGS
+   ============================================ */
+
+function loadAdmin() {
+
+  const c =
+    getPricingConfig();
+
+
+  /* Fibre */
+
+  document
+    .getElementById('fibre-rate')
+    .value =
+      c.fibre.rate;
+
+
+  document
+    .getElementById('fibre-type')
+    .value =
+      c.fibre.type;
+
+
+  document
+    .getElementById('fibre-description')
+    .value =
+      c.fibre.description;
+
+
+  /* Rack */
+
+  document
+    .getElementById('rack-rate')
+    .value =
+      c.rack.rate;
+
+
+  document
+    .getElementById('rack-type')
+    .value =
+      c.rack.type;
+
+
+  document
+    .getElementById('rack-description')
+    .value =
+      c.rack.description;
+
+
+  /* Router */
+
+  document
+    .getElementById('router-rate')
+    .value =
+      c.router.rate;
+
+
+  document
+    .getElementById('router-type')
+    .value =
+      c.router.type;
+
+
+  document
+    .getElementById('router-description')
+    .value =
+      c.router.description;
+
+
+  /* Bandwidth */
+
+  document
+    .getElementById('bandwidth-rate')
+    .value =
+      c.bandwidth.ratePerMbps;
+
+
+  document
+    .getElementById('bandwidth-type')
+    .value =
+      c.bandwidth.type;
+
+
+  updateBandwidthExamples();
+
+  renderCustomItems();
+
+}
+
+
+/* ============================================
+   BANDWIDTH EXAMPLES
+   ============================================ */
+
+function updateBandwidthExamples() {
+
+  const rate =
+    Number(
+      document
+        .getElementById('bandwidth-rate')
+        .value
+    ) || 0;
+
+
+  document
+    .getElementById('example-10')
+    .textContent =
+      formatNairaWhole(
+        rate * 10
+      );
+
+
+  document
+    .getElementById('example-20')
+    .textContent =
+      formatNairaWhole(
+        rate * 20
+      );
+
+
+  document
+    .getElementById('example-50')
+    .textContent =
+      formatNairaWhole(
+        rate * 50
+      );
+
+
+  document
+    .getElementById('example-100')
+    .textContent =
+      formatNairaWhole(
+        rate * 100
+      );
+
+
+  document
+    .getElementById('example-1000')
+    .textContent =
+      formatNairaWhole(
+        rate * 1000
+      );
+
+}
+
+
+document
+  .getElementById('bandwidth-rate')
+  .addEventListener(
+    'input',
+    updateBandwidthExamples
+  );
+
+
+/* ============================================
+   ADD NEW ITEM
+   ============================================ */
+
+document
+  .getElementById('add-item')
+  .addEventListener(
+    'click',
+    () => {
+
+      const name =
+        document
+          .getElementById('new-item-name')
+          .value
+          .trim();
+
+
+      const rate =
+        Number(
+          document
+            .getElementById('new-item-rate')
+            .value
+        );
+
+
+      const type =
+        document
+          .getElementById('new-item-type')
+          .value;
+
+
+      const description =
+        document
+          .getElementById('new-item-description')
+          .value
+          .trim();
+
+
+      const unit =
+        document
+          .getElementById('new-item-unit')
+          .value
+          .trim()
+          || 'each';
+
+
+      if (!name) {
+
+        alert(
+          'Please enter an item name.'
+        );
+
+        return;
+
+      }
+
+
+      if (
+        Number.isNaN(rate)
+        ||
+        rate < 0
+      ) {
+
+        alert(
+          'Please enter a valid rate.'
+        );
+
+        return;
+
+      }
+
+
+      const items =
+        getCustomItems();
+
+
+      items.push({
+
+        id:
+          'custom_' +
+          Date.now(),
+
+        name,
+
+        rate,
+
+        type,
+
+        description,
+
+        unit
+
+      });
+
+
+      saveCustomItems(items);
+
+      renderCustomItems();
+
+
+      document
+        .getElementById('new-item-name')
+        .value = '';
+
+
+      document
+        .getElementById('new-item-rate')
+        .value = '';
+
+
+      document
+        .getElementById('new-item-description')
+        .value = '';
+
+
+      document
+        .getElementById('new-item-unit')
+        .value = '';
+
+    }
+  );
+
+
+/* ============================================
+   COLLECT ADMIN SETTINGS
+   ============================================ */
+
+function collectAdmin() {
+
+  const c =
+    getPricingConfig();
+
+
+  /* Fibre */
+
+  c.fibre.rate =
+    Number(
+      document
+        .getElementById('fibre-rate')
+        .value
+    ) || 0;
+
+
+  c.fibre.type =
+    document
+      .getElementById('fibre-type')
+      .value;
+
+
+  c.fibre.description =
+    document
+      .getElementById('fibre-description')
+      .value
+      .trim()
+      ||
+    DEFAULT_PRICING
+      .fibre
+      .description;
+
+
+  /* Rack */
+
+  c.rack.rate =
+    Number(
+      document
+        .getElementById('rack-rate')
+        .value
+    ) || 0;
+
+
+  c.rack.type =
+    document
+      .getElementById('rack-type')
+      .value;
+
+
+  c.rack.description =
+    document
+      .getElementById('rack-description')
+      .value
+      .trim()
+      ||
+    DEFAULT_PRICING
+      .rack
+      .description;
+
+
+  /* Router */
+
+  c.router.rate =
+    Number(
+      document
+        .getElementById('router-rate')
+        .value
+    ) || 0;
+
+
+  c.router.type =
+    document
+      .getElementById('router-type')
+      .value;
+
+
+  c.router.description =
+    document
+      .getElementById('router-description')
+      .value
+      .trim()
+      ||
+    DEFAULT_PRICING
+      .router
+      .description;
+
+
+  /* Bandwidth */
+
+  c.bandwidth.ratePerMbps =
+    Number(
+      document
+        .getElementById('bandwidth-rate')
+        .value
+    ) || 0;
+
+
+  c.bandwidth.type =
+    document
+      .getElementById('bandwidth-type')
+      .value;
+
+
+  delete c.bandwidth.options;
+
+
+  return c;
+
+}
+
+
+/* ============================================
+   SAVE PRICING
+   ============================================ */
+
+document
+  .getElementById('save-pricing')
+  .addEventListener(
+    'click',
+    () => {
+
+      savePricingConfig(
+        collectAdmin()
+      );
+
+
+      const message =
+        document
+          .getElementById(
+            'save-message'
+          );
+
+
+      message.textContent =
+        'Pricing saved successfully.';
+
+
+      setTimeout(
+        () => {
+
+          message.textContent = '';
+
+        },
+        2500
+      );
+
+    }
+  );
+
+
+/* ============================================
+   RESET PRICING
+   ============================================ */
+
+document
+  .getElementById('reset-pricing')
+  .addEventListener(
+    'click',
+    () => {
+
+      if (
+        confirm(
+          'Reset the main BOQ pricing to the prototype defaults?'
+        )
+      ) {
+
+        resetPricingConfig();
+
+        loadAdmin();
+
+
+        document
+          .getElementById(
+            'save-message'
+          )
+          .textContent =
+            'Defaults restored.';
+
+
+        setTimeout(
+          () => {
+
+            document
+              .getElementById(
+                'save-message'
+              )
+              .textContent = '';
+
+          },
+          2500
+        );
+
+      }
+
+    }
+  );
+
+
+/* ============================================
+   KMZ IMPORT
+   ============================================ */
+
+/*
+  Placeholder only.
+
+  Backend will later connect this button
+  to the KMZ import endpoint.
+*/
+
+document
+  .getElementById('import-kmz')
+  .addEventListener(
+    'click',
+    () => {
+
+      const file =
+        document
+          .getElementById('kmz-file')
+          .files[0];
+
+
+      const message =
+        document
+          .getElementById('kmz-message');
+
+
+      if (!file) {
+
+        message.textContent =
+          'Select a KMZ file first.';
+
+        return;
+
+      }
+
+
+      message.textContent =
+        `Selected: ${file.name}. KMZ processing will be connected by the backend team.`;
+
+    }
+  );
+
+
+/* ============================================
+   INITIALIZE
+   ============================================ */
+
+loadAdmin();
+
+</script>
+
+</body>
+</html>

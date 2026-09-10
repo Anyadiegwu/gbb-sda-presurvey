@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Estimates — GBB Fiber Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css" />
+<link rel="stylesheet" href="../css/responsive.css" />
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Skip to content</a>
+
+<div class="mobile-topbar">
+  <span class="logo-text">GBB Fiber Estimator</span>
+  <button class="hamburger-btn" aria-label="Open navigation" aria-expanded="false">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+</div>
+<div class="nav-overlay"></div>
+
+<div class="app-shell">
+  <aside class="sidebar mobile-drawer" id="sidebar">
+    <div class="sidebar-logo">
+      <svg class="logo-icon" viewBox="0 0 34 34" fill="none">
+        <circle cx="17" cy="17" r="15" stroke="white" stroke-width="2"/>
+        <circle cx="17" cy="17" r="9" stroke="white" stroke-width="2"/>
+        <circle cx="17" cy="17" r="3" fill="white"/>
+      </svg>
+      <span class="logo-text">GBB Fiber<br/>Estimator</span>
+    </div>
+
+    <a href="../index.html" class="new-estimate-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <span>New Estimate</span>
+    </a>
+
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <a href="../index.html">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>New Estimate</span>
+      </a>
+      <a href="estimates.html" class="active">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>My Estimates</span>
+      </a>
+      <a href="coverage.html">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4z"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        <span>Coverage Map</span>
+      </a>
+      <a href="how-it-works.html">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 2-3 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>How It Works</span>
+      </a>
+      <a href="faq.html">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <span>FAQ</span>
+      </a>
+      <a href="contact.html">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <span>Contact Us</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">Prototype build &middot; Galaxy Backbone</div>
+  </aside>
+
+  <main class="workspace" id="main-content">
+    <div class="page-header">
+      <h1>My Estimates</h1>
+      <p class="muted">Estimates you've submitted, stored on this device.</p>
+    </div>
+    <div id="estimates-list"></div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script src="../js/boq.js"></script>
+<script>
+function renderEstimates() {
+
+  const list = getSavedEstimates();
+  const container = document.getElementById('estimates-list');
+
+  if (list.length === 0) {
+
+    container.innerHTML = `
+      <div class="card empty-state">
+
+        <p>
+          No estimates yet. Create your first estimate
+          to see it here.
+        </p>
+
+        <a
+          class="btn btn-primary"
+          href="../index.html"
+          style="margin-top:14px;display:inline-flex;">
+          + New Estimate
+        </a>
+
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML = list.map((e, index) => `
+
+    <div class="card">
+
+      <div class="estimate-list-item">
+
+        <div>
+
+          <h3>${e.reference}</h3>
+
+          <p
+            class="muted"
+            style="margin:2px 0 0;">
+            ${e.date}
+          </p>
+
+        </div>
+
+        <span class="status-badge">
+          ${e.status}
+        </span>
+
+      </div>
+
+      <div class="review-row">
+        <span>Bandwidth</span>
+        <span>
+          ${e.requirements.bandwidthLabel}
+        </span>
+      </div>
+
+      <div class="review-row">
+        <span>Fibre distance</span>
+        <span>
+          ${(e.location.distanceMetres / 1000).toFixed(2)} km
+        </span>
+      </div>
+
+      <div class="review-row">
+        <span>Total NRC</span>
+        <span>
+          ${formatNaira(e.calc.totalNRC)}
+        </span>
+      </div>
+
+      <div class="review-row">
+        <span>Total ARC</span>
+        <span>
+          ${formatNaira(e.calc.totalARC)}
+        </span>
+      </div>
+
+      <div style="margin-top:18px;">
+
+        <button
+          class="btn btn-primary"
+          onclick="downloadEstimateBOQ(${index})">
+          Download BOQ Excel
+        </button>
+
+      </div>
+
+    </div>
+
+  `).join('');
+}
+renderEstimates();
+
+function downloadEstimateBOQ(index) {
+
+  const estimates = getSavedEstimates();
+  const estimate = estimates[index];
+
+  if (!estimate) {
+    alert('Estimate could not be found.');
+    return;
+  }
+
+  /*
+   * Recalculate using the pricing configuration
+   * that is currently stored on the device.
+   */
+  const draft = {
+    distanceMetres:
+      estimate.location.distanceMetres,
+
+    bandwidth:
+      estimate.requirements.bandwidthLabel,
+
+    customMbps:
+      estimate.requirements.bandwidthLabel
+        ?.match(/Custom \(([\d.]+) Mbps\)/)?.[1] || null,
+
+    providesOwnRack:
+      estimate.requirements.providesOwnRack,
+
+    hasGponTerminal:
+      estimate.requirements.hasGponTerminal
+  };
+
+  const boq = calculateBOQ(draft);
+
+  const rows = [];
+
+  let serialNumber = 1;
+
+  /*
+   * One-Off section
+   */
+  rows.push([
+    'ONE-OFF'
+  ]);
+
+  rows.push([
+    'S/N',
+    'Item Description',
+    'QTY',
+    'Rate',
+    'NRC',
+    'ARC'
+  ]);
+
+  boq.items
+    .filter(item => item.billingType === 'one-off')
+    .forEach(item => {
+
+      rows.push([
+        serialNumber++,
+        item.description,
+        item.quantity,
+        item.rate,
+        item.nrc,
+        ''
+      ]);
+
+    });
+
+  /*
+   * Recurring section
+   */
+  rows.push([]);
+
+  rows.push([
+    'RECURRING'
+  ]);
+
+  rows.push([
+    'S/N',
+    'Item Description',
+    'QTY',
+    'Rate',
+    'NRC',
+    'ARC'
+  ]);
+
+  boq.items
+    .filter(item => item.billingType === 'recurring')
+    .forEach(item => {
+
+      rows.push([
+        serialNumber++,
+        item.description,
+        item.quantity,
+        item.rate,
+        '',
+        item.arc
+      ]);
+
+    });
+
+  /*
+   * Totals
+   */
+  rows.push([]);
+
+  rows.push([
+    '',
+    '',
+    '',
+    'Total NRC',
+    boq.totalNRC
+  ]);
+
+  rows.push([
+    '',
+    '',
+    '',
+    'Total ARC',
+    boq.totalARC
+  ]);
+
+  rows.push([
+    '',
+    '',
+    '',
+    'Grand Total',
+    boq.grandTotal
+  ]);
+
+  const worksheet =
+    XLSX.utils.aoa_to_sheet(rows);
+
+  /*
+   * Basic normal Excel formatting.
+   */
+
+  worksheet['!cols'] = [
+    { wch: 8 },
+    { wch: 42 },
+    { wch: 12 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 }
+  ];
+
+  /*
+   * Currency formatting.
+   */
+  Object.keys(worksheet).forEach(cellAddress => {
+
+    if (cellAddress.startsWith('!')) return;
+
+    const cell = worksheet[cellAddress];
+
+    if (
+      typeof cell.v === 'number' &&
+      (
+        cellAddress.startsWith('D') ||
+        cellAddress.startsWith('E') ||
+        cellAddress.startsWith('F')
+      )
+    ) {
+
+      cell.z = '₦#,##0.00';
+
+    }
+
+  });
+
+  const workbook =
+    XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    'BOQ'
+  );
+
+  XLSX.writeFile(
+    workbook,
+    `${estimate.reference}-BOQ.xlsx`
+  );
+}
+</script>
+</body>
+</html>

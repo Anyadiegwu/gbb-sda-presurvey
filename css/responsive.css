@@ -1,0 +1,36 @@
+/* ============================================
+   Responsive rules — tablet & mobile
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .sidebar:not(.mobile-drawer) { width: 84px; padding: 22px 10px; }
+  .sidebar:not(.mobile-drawer) .logo-text,
+  .sidebar:not(.mobile-drawer) .sidebar-footer,
+  .sidebar:not(.mobile-drawer) .new-estimate-btn span,
+  .sidebar:not(.mobile-drawer) .sidebar-nav a span { display: none; }
+  .sidebar:not(.mobile-drawer) .sidebar-nav a { justify-content: center; }
+  .sidebar:not(.mobile-drawer) .new-estimate-btn { padding: 11px; }
+  .select-card-grid { grid-template-columns: 1fr; }
+  .static-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 860px) {
+  .app-shell > .sidebar:not(.mobile-drawer) { display: none; }
+  .mobile-topbar { display: flex; }
+  .workspace { padding: 20px 16px 50px; }
+  .stepper { padding: 14px 10px; }
+  .step-label { display: none; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .card { padding: 18px; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 21px; }
+  .step-actions { flex-wrap: wrap; gap: 10px; }
+  .step-actions .btn { width: 100%; }
+  .distance-box { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
