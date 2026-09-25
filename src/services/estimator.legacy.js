@@ -1,21 +1,15 @@
-/* ============================================
-   estimator.js
-   GBB Fiber Estimator
-   Pricing & Calculation Engine
-
-   - Pricing is controlled from admin.html
-   - One-Off items → NRC
-   - Recurring items → ARC
-   - Grand Total = NRC + ARC
-   - Pricing is stored in localStorage
-
-   BANDWIDTH PRICING:
-   - Admin sets ONE price per Mbps
-   - Selected bandwidth × price per Mbps
-   - 1 Gbps = 1000 Mbps
-   - Custom bandwidth uses the same calculation
-   ============================================ */
-
+/*
+ * estimator.legacy.js
+ * ---------------------------------------------------------------------------
+ * LEGACY REFERENCE FILE
+ *
+ * This is the previous non-React pricing engine. The active React application
+ * uses `src/services/pricing.js` instead.
+ *
+ * It is kept here as a migration/reference file so older logic is not lost
+ * while the React version is being understood and validated.
+ * ---------------------------------------------------------------------------
+ */
 
 /* ============================================
    DEFAULT PRICING

@@ -1,3 +1,16 @@
+/*
+ * style.css
+ * ---------------------------------------------------------------------------
+ * Global visual system for the GBB Fibre Estimator.
+ *
+ * React components define WHAT is on the page.
+ * This file defines HOW those elements look.
+ *
+ * The stylesheet is intentionally framework-free. The migration kept the
+ * existing visual design instead of introducing Tailwind/Bootstrap/etc.
+ * ---------------------------------------------------------------------------
+ */
+
 /* ============================================
    GBB Fiber Estimator — Clean Green
    ============================================ */

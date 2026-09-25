@@ -1,6 +1,12 @@
-/* ============================================
-   Responsive rules — tablet & mobile
-   ============================================ */
+/*
+ * responsive.css
+ * ---------------------------------------------------------------------------
+ * Responsive overrides for tablet/mobile widths.
+ *
+ * The base styles live in style.css. These media queries modify layout when
+ * the viewport becomes smaller.
+ * ---------------------------------------------------------------------------
+ */
 
 @media (max-width: 1024px) {
   .sidebar:not(.mobile-drawer) { width: 84px; padding: 22px 10px; }
