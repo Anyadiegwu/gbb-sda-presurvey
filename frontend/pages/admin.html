@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GBB Fiber — Ops Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1417;
+    --surface:#161D21;
+    --surface-2:#1E272C;
+    --border:#2A353B;
+    --text:#E7EDEE;
+    --text-dim:#8CA0A6;
+    --accent:#4DD6C4;
+    --accent-dim:#2C4A47;
+    --danger:#E2665A;
+    --danger-dim:#3A2622;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Inter",system-ui,sans-serif;font-size:14px;}
+  code, .mono, input, select, textarea, .num{font-family:"IBM Plex Mono","Courier New",monospace;}
+  h1,h2,h3{font-family:"Space Grotesk",sans-serif;font-weight:600;margin:0;}
+  a{color:var(--accent);}
+  button{font-family:inherit;font-size:13px;cursor:pointer;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface-2);color:var(--text);padding:7px 12px;transition:border-color .15s;}
+  button:hover{border-color:var(--accent);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.primary{background:var(--accent);color:#08201C;border-color:var(--accent);font-weight:600;}
+  button.primary:hover{background:#3fc2b1;}
+  button.danger{color:var(--danger);}
+  button.danger:hover{border-color:var(--danger);}
+  input,select,textarea{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:var(--radius);width:100%;}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;}
+  .field{margin-bottom:12px;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--surface-2);}
+
+  /* ---- layout ---- */
+  #app{display:none;min-height:100vh;grid-template-columns:220px 1fr;}
+  #app.shown{display:grid;}
+  nav{background:var(--surface);border-right:1px solid var(--border);padding:20px 0;display:flex;flex-direction:column;}
+  nav .brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+  nav .brand h1{font-size:16px;letter-spacing:.01em;}
+  nav .brand .sub{color:var(--text-dim);font-size:11px;margin-top:3px;}
+  nav .navlink{padding:10px 20px;color:var(--text-dim);cursor:pointer;border-left:2px solid transparent;font-size:13px;}
+  nav .navlink:hover{color:var(--text);}
+  nav .navlink.active{color:var(--text);border-left-color:var(--accent);background:var(--surface-2);}
+  nav .spacer{flex:1;}
+  nav .who{padding:14px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);}
+  nav .who strong{color:var(--text);display:block;font-size:13px;}
+  nav .who button{width:100%;margin-top:8px;}
+
+  main{padding:28px 36px;overflow-y:auto;}
+  .panel{display:none;max-width:1100px;}
+  .panel.active{display:block;}
+  .panel-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px;}
+  .panel-head h2{font-size:20px;}
+  .panel-head p{color:var(--text-dim);font-size:13px;margin:4px 0 0;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;}
+  .card h3{font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:14px;font-weight:500;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .row-actions{display:flex;gap:6px;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-family:"IBM Plex Mono",monospace;}
+  .pill.on{background:var(--accent-dim);color:var(--accent);}
+  .pill.off{background:var(--danger-dim);color:var(--danger);}
+  .pill.builtin{background:#2A353B;color:var(--text-dim);}
+  .empty{color:var(--text-dim);padding:24px 0;text-align:center;font-size:13px;}
+  .helptext{color:var(--text-dim);font-size:12px;margin-top:6px;}
+
+  /* ---- login ---- */
+  #login{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  #login .box{width:360px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;}
+  #login h1{font-size:20px;margin-bottom:2px;}
+  #login .sub{color:var(--text-dim);font-size:13px;margin-bottom:22px;}
+  #login .err{color:var(--danger);font-size:13px;margin-top:12px;display:none;}
+
+  /* ---- toast ---- */
+  #toast{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:999;}
+  .toast{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:13px;min-width:220px;}
+  .toast.error{border-left-color:var(--danger);}
+
+  /* ---- modal ---- */
+  #modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:998;}
+  #modal-backdrop.shown{display:flex;}
+  #modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:520px;max-height:80vh;overflow-y:auto;}
+  #modal h3{font-size:15px;margin-bottom:14px;}
+  #modal .close{float:right;}
+
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:6px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <div class="box">
+    <h1>GBB Fiber</h1>
+    <div class="sub">Operations console</div>
+    <div class="field">
+      <label for="api-base">API base URL</label>
+      <input id="api-base" value="http://localhost:8000">
+    </div>
+    <div class="field">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" placeholder="admin@example.com" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="login-password">Password</label>
+      <input id="login-password" type="password" autocomplete="current-password">
+    </div>
+    <button class="primary" style="width:100%" onclick="login()">Log in</button>
+    <div class="err" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <nav>
+    <div class="brand">
+      <h1>GBB Fiber</h1>
+      <div class="sub">Ops console</div>
+    </div>
+    <div class="navlink active" data-panel="items">BOQ Items</div>
+    <div class="navlink" data-panel="routes">Fiber Routes</div>
+    <div class="navlink" data-panel="manholes">Manholes</div>
+    <div class="navlink" data-panel="formulas">Formulas</div>
+    <div class="navlink" data-panel="submissions">Submissions</div>
+    <div class="navlink" data-panel="admins" id="nav-admins">Admins</div>
+    <div class="spacer"></div>
+    <div class="who">
+      <strong id="who-name">—</strong>
+      <span id="who-email"></span>
+      <button onclick="logout()">Log out</button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ---- BOQ ITEMS ---- -->
+    <section class="panel active" id="panel-items">
+      <div class="panel-head">
+        <div>
+          <h2>BOQ Items</h2>
+          <p>Every active item here is priced into every customer quote automatically.</p>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Key</th><th>Rate</th><th>Unit</th><th>Charge</th><th>Mode</th><th>Status</th><th></th></tr></thead>
+          <tbody id="items-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Add custom item</h3>
+        <div class="grid-3">
+          <div class="field"><label>Name</label><input id="new-item-name" placeholder="Site survey fee"></div>
+          <div class="field"><label>Rate (₦)</label><input id="new-item-rate" type="number" step="0.01" value="0"></div>
+          <div class="field"><label>Unit</label><input id="new-item-unit" value="each"></div>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label>Charge type</label>
+            <select id="new-item-charge"><option value="one_off">One-Off (NRC)</option><option value="recurring">Recurring (ARC)</option></select>
+          </div>
+          <div class="field"><label>Computation</label>
+            <select id="new-item-mode"><option value="flat">Flat</option></select>
+          </div>
+          <div class="field"><label>Description</label><input id="new-item-desc" placeholder="Optional"></div>
+        </div>
+        <button class="primary" onclick="createItem()">Add item</button>
+      </div>
+    </section>
+
+    <!-- ---- FIBER ROUTES ---- -->
+    <section class="panel" id="panel-routes">
+      <div class="panel-head">
+        <div><h2>Fiber Routes</h2><p>Backbone cable geometry, imported from KMZ/KML exports.</p></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Source file</th><th>Imported</th><th>Status</th><th></th></tr></thead>
+          <tbody id="routes-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Import KMZ / KML</h3>
+        <div class="field"><input id="kmz-file" type="file" accept=".kmz,.kml"></div>
+        <button class="primary" onclick="importKmz()">Upload &amp; import</button>
+        <div class="helptext">Every LineString in the file becomes a route. Re-uploading the same file adds duplicates — delete the old set first if replacing it.</div>
+      </div>
+    </section>
+
+    <!-- ---- MANHOLES ---- -->
+    <section class="panel" id="panel-manholes">
+      <div class="panel-head">
+        <div><h2>Manholes</h2><p>POP access points customers are routed to.</p></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Latitude</th><th>Longitude</th><th>Notes</th><th>Status</th><th></th></tr></thead>
+          <tbody id="manholes-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Add manhole</h3>
+        <div class="grid-3">
+          <div class="field"><label>Name</label><input id="new-mh-name" placeholder="POP-Wuse-01"></div>
+          <div class="field"><label>Latitude</label><input id="new-mh-lat" type="number" step="0.000001"></div>
+          <div class="field"><label>Longitude</label><input id="new-mh-lng" type="number" step="0.000001"></div>
+        </div>
+        <div class="field"><label>Notes</label><input id="new-mh-notes" placeholder="Optional"></div>
+        <button class="primary" onclick="createManhole()">Add manhole</button>
+      </div>
+      <div class="card">
+        <h3>Import sites from KMZ / KML</h3>
+        <div class="field"><input id="mh-kmz-file" type="file" accept=".kmz,.kml"></div>
+        <button class="primary" onclick="importManholes()">Upload &amp; import</button>
+        <div class="helptext">Every Point placemark in the file becomes a manhole. These are usually city/site-level markers, not precise pinpoints -- review and adjust coordinates as more accurate survey data comes in. Re-uploading the same file adds duplicates.</div>
+      </div>
+    </section>
+
+    <!-- ---- FORMULAS ---- -->
+    <section class="panel" id="panel-formulas">
+      <div class="panel-head">
+        <div><h2>Formulas</h2><p>Optional admin-rewritable pricing math, per item.</p></div>
+      </div>
+      <div class="card">
+        <div class="field" style="max-width:220px">
+          <label>Item</label>
+          <select id="formula-item-key" onchange="loadFormulas()">
+            <option value="fibre">fibre</option>
+            <option value="bandwidth">bandwidth</option>
+            <option value="rack">rack</option>
+            <option value="router">router</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Expression</th><th>Status</th><th></th></tr></thead>
+          <tbody id="formulas-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>New formula</h3>
+        <div class="grid-2">
+          <div class="field"><label>Name</label><input id="new-formula-name" placeholder="Bulk discount"></div>
+          <div class="field"><label>Expression</label><input id="new-formula-expr" placeholder="quantity * rate" class="mono"></div>
+        </div>
+        <div class="helptext">Allowed variables: <code>rate</code>, <code>quantity</code>, plus <code>distance_m</code>/<code>distance_km</code> for fibre or <code>bandwidth_mbps</code> for bandwidth. Set the item's computation mode to "formula" on the BOQ Items tab for this to take effect.</div>
+        <div style="margin-top:12px" class="row-actions">
+          <button onclick="validateFormula()">Validate</button>
+          <button class="primary" onclick="createFormula()">Save formula</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- SUBMISSIONS ---- -->
+    <section class="panel" id="panel-submissions">
+      <div class="panel-head">
+        <div><h2>Submissions</h2><p>Customer BOQ requests.</p></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Ref</th><th>Customer</th><th>Bandwidth</th><th>Grand total</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+          <tbody id="submissions-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---- ADMINS ---- -->
+    <section class="panel" id="panel-admins">
+      <div class="panel-head">
+        <div><h2>Admins</h2><p>Superadmin only — manage who can access this console.</p></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+          <tbody id="admins-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Create admin</h3>
+        <div class="grid-3">
+          <div class="field"><label>Full name</label><input id="new-admin-name"></div>
+          <div class="field"><label>Email</label><input id="new-admin-email" type="email"></div>
+          <div class="field"><label>Password</label><input id="new-admin-password" type="password"></div>
+        </div>
+        <button class="primary" onclick="createAdmin()">Create admin</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+<div id="modal-backdrop"><div id="modal"></div></div>
+
+<script>
+/* ---------------- state & helpers ---------------- */
+let API_BASE = "http://localhost:8000";
+let TOKEN = null;
+let ME = null;
+
+function toast(msg, isError){
+  const el = document.createElement("div");
+  el.className = "toast" + (isError ? " error" : "");
+  el.textContent = msg;
+  document.getElementById("toast").appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+async function api(path, options){
+  options = options || {};
+  const headers = options.headers || {};
+  if (TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+  if (options.body && !(options.body instanceof FormData)){
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+  let data = null;
+  try { data = await res.json(); } catch(e) { /* no body */ }
+  if (!res.ok){
+    const detail = (data && data.detail) ? data.detail : (res.status + " " + res.statusText);
+    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+  }
+  return data;
+}
+
+function closeModal(){ document.getElementById("modal-backdrop").classList.remove("shown"); }
+function openModal(html){
+  document.getElementById("modal").innerHTML = html;
+  document.getElementById("modal-backdrop").classList.add("shown");
+}
+document.getElementById("modal-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "modal-backdrop") closeModal();
+});
+
+function fmtMoney(n){ return "₦" + Number(n).toLocaleString(undefined, {maximumFractionDigits:2}); }
+function fmtDate(iso){ return new Date(iso).toLocaleString(); }
+
+/* ---------------- auth ---------------- */
+async function login(){
+  API_BASE = document.getElementById("api-base").value.replace(/\/$/, "");
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  const errEl = document.getElementById("login-error");
+  errEl.style.display = "none";
+  try{
+    const tokenResp = await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+    TOKEN = tokenResp.accessToken;
+    ME = await api("/auth/me");
+    document.getElementById("who-name").textContent = ME.fullName;
+    document.getElementById("who-email").textContent = ME.email;
+    document.getElementById("nav-admins").style.display = ME.isSuperadmin ? "" : "none";
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").classList.add("shown");
+    loadAll();
+  }catch(e){
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+  }
+}
+
+function logout(){
+  TOKEN = null; ME = null;
+  document.getElementById("app").classList.remove("shown");
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("login-password").value = "";
+}
+
+/* ---------------- nav ---------------- */
+document.querySelectorAll(".navlink").forEach(link => {
+  link.addEventListener("click", () => {
+    document.querySelectorAll(".navlink").forEach(l => l.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    link.classList.add("active");
+    document.getElementById("panel-" + link.dataset.panel).classList.add("active");
+  });
+});
+
+function loadAll(){
+  loadItems();
+  loadRoutes();
+  loadManholes();
+  loadFormulas();
+  loadSubmissions();
+  if (ME && ME.isSuperadmin) loadAdmins();
+}
+
+/* ---------------- BOQ items ---------------- */
+async function loadItems(){
+  const items = await api("/admin/boq-items/");
+  const tbody = document.getElementById("items-table");
+  if (!items.length){ tbody.innerHTML = '<tr><td colspan="8" class="empty">No items yet.</td></tr>'; return; }
+  tbody.innerHTML = items.map(it => `
+    <tr>
+      <td>${it.name}</td>
+      <td class="mono">${it.key}</td>
+      <td class="num">${it.rate}</td>
+      <td>${it.unit}</td>
+      <td>${it.chargeType === "one_off" ? "One-Off" : "Recurring"}</td>
+      <td>
+        <select onchange="updateItem(${it.id}, {computationMode: this.value})">
+          <option value="flat" ${it.computationMode==="flat"?"selected":""}>Flat</option>
+          <option value="quantity" ${it.computationMode==="quantity"?"selected":""}>Quantity</option>
+          <option value="formula" ${it.computationMode==="formula"?"selected":""}>Formula</option>
+        </select>
+      </td>
+      <td>
+        <span class="pill ${it.isActive ? "on" : "off"}" style="cursor:pointer" onclick="updateItem(${it.id}, {isActive: ${!it.isActive}})">${it.isActive ? "active" : "inactive"}</span>
+        ${it.isCustom ? "" : '<span class="pill builtin" style="margin-left:6px">built-in</span>'}
+      </td>
+      <td class="row-actions">
+        <button onclick="editItemRate(${it.id}, ${it.rate})">Edit rate</button>
+        ${it.isCustom ? `<button class="danger" onclick="deleteItem(${it.id})">Delete</button>` : ""}
+      </td>
+    </tr>`).join("");
+}
+
+function editItemRate(id, currentRate){
+  const value = prompt("New rate (₦):", currentRate);
+  if (value === null) return;
+  const rate = parseFloat(value);
+  if (isNaN(rate)) { toast("Enter a valid number", true); return; }
+  updateItem(id, { rate });
+}
+
+async function updateItem(id, patch){
+  try{
+    await api("/admin/boq-items/" + id, { method: "PATCH", body: JSON.stringify(patch) });
+    toast("Item updated");
+    loadItems();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function createItem(){
+  const payload = {
+    name: document.getElementById("new-item-name").value,
+    rate: parseFloat(document.getElementById("new-item-rate").value) || 0,
+    unit: document.getElementById("new-item-unit").value || "each",
+    chargeType: document.getElementById("new-item-charge").value,
+    computationMode: document.getElementById("new-item-mode").value,
+    description: document.getElementById("new-item-desc").value || null,
+  };
+  if (!payload.name){ toast("Name is required", true); return; }
+  try{
+    await api("/admin/boq-items/", { method: "POST", body: JSON.stringify(payload) });
+    toast("Item created");
+    document.getElementById("new-item-name").value = "";
+    document.getElementById("new-item-desc").value = "";
+    loadItems();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function deleteItem(id){
+  if (!confirm("Delete this item?")) return;
+  try{
+    await api("/admin/boq-items/" + id, { method: "DELETE" });
+    toast("Item deleted");
+    loadItems();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------------- Fiber routes ---------------- */
+async function loadRoutes(){
+  const routes = await api("/admin/fiber-routes/");
+  const tbody = document.getElementById("routes-table");
+  if (!routes.length){ tbody.innerHTML = '<tr><td colspan="5" class="empty">No routes imported yet.</td></tr>'; return; }
+  tbody.innerHTML = routes.map(r => `
+    <tr>
+      <td>${r.name}</td>
+      <td class="mono">${r.sourceFile || "—"}</td>
+      <td>${fmtDate(r.createdAt)}</td>
+      <td><span class="pill ${r.isActive ? "on" : "off"}">${r.isActive ? "active" : "inactive"}</span></td>
+      <td><button class="danger" onclick="deleteRoute(${r.id})">Delete</button></td>
+    </tr>`).join("");
+}
+
+async function importKmz(){
+  const fileInput = document.getElementById("kmz-file");
+  if (!fileInput.files.length){ toast("Choose a .kmz or .kml file first", true); return; }
+  const form = new FormData();
+  form.append("file", fileInput.files[0]);
+  try{
+    const result = await api("/admin/fiber-routes/import", { method: "POST", body: form });
+    toast(`Imported ${result.importedCount} routes from ${result.sourceFile}`);
+    fileInput.value = "";
+    loadRoutes();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function deleteRoute(id){
+  if (!confirm("Delete this route?")) return;
+  try{
+    await api("/admin/fiber-routes/" + id, { method: "DELETE" });
+    toast("Route deleted");
+    loadRoutes();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------------- Manholes ---------------- */
+async function loadManholes(){
+  const manholes = await api("/admin/manholes/");
+  const tbody = document.getElementById("manholes-table");
+  if (!manholes.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty">No manholes yet.</td></tr>'; return; }
+  tbody.innerHTML = manholes.map(m => `
+    <tr>
+      <td>${m.name}</td>
+      <td class="num">${m.latitude}</td>
+      <td class="num">${m.longitude}</td>
+      <td>${m.notes || "—"}</td>
+      <td><span class="pill ${m.isActive ? "on" : "off"}" style="cursor:pointer" onclick="updateManhole(${m.id}, {isActive: ${!m.isActive}})">${m.isActive ? "active" : "inactive"}</span></td>
+      <td><button class="danger" onclick="deleteManhole(${m.id})">Delete</button></td>
+    </tr>`).join("");
+}
+
+async function updateManhole(id, patch){
+  try{
+    await api("/admin/manholes/" + id, { method: "PATCH", body: JSON.stringify(patch) });
+    toast("Manhole updated");
+    loadManholes();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function createManhole(){
+  const payload = {
+    name: document.getElementById("new-mh-name").value,
+    latitude: parseFloat(document.getElementById("new-mh-lat").value),
+    longitude: parseFloat(document.getElementById("new-mh-lng").value),
+    notes: document.getElementById("new-mh-notes").value || null,
+  };
+  if (!payload.name || isNaN(payload.latitude) || isNaN(payload.longitude)){
+    toast("Name, latitude and longitude are required", true); return;
+  }
+  try{
+    await api("/admin/manholes/", { method: "POST", body: JSON.stringify(payload) });
+    toast("Manhole added");
+    document.getElementById("new-mh-name").value = "";
+    document.getElementById("new-mh-lat").value = "";
+    document.getElementById("new-mh-lng").value = "";
+    document.getElementById("new-mh-notes").value = "";
+    loadManholes();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function importManholes(){
+  const fileInput = document.getElementById("mh-kmz-file");
+  if (!fileInput.files.length){ toast("Choose a .kmz or .kml file first", true); return; }
+  const form = new FormData();
+  form.append("file", fileInput.files[0]);
+  try{
+    const result = await api("/admin/manholes/import", { method: "POST", body: form });
+    toast(`Imported ${result.importedCount} sites from ${result.sourceFile}`);
+    fileInput.value = "";
+    loadManholes();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function deleteManhole(id){
+  if (!confirm("Delete this manhole?")) return;
+  try{
+    await api("/admin/manholes/" + id, { method: "DELETE" });
+    toast("Manhole deleted");
+    loadManholes();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------------- Formulas ---------------- */
+async function loadFormulas(){
+  const itemKey = document.getElementById("formula-item-key").value;
+  const formulas = await api("/admin/formulas/?itemKey=" + itemKey);
+  const tbody = document.getElementById("formulas-table");
+  if (!formulas.length){ tbody.innerHTML = '<tr><td colspan="4" class="empty">No formulas for this item yet — it uses quantity × rate by default.</td></tr>'; return; }
+  tbody.innerHTML = formulas.map(f => `
+    <tr>
+      <td>${f.name}</td>
+      <td class="mono">${f.expression}</td>
+      <td><span class="pill ${f.isActive ? "on" : "off"}">${f.isActive ? "active" : "inactive"}</span></td>
+      <td>${f.isActive ? "" : `<button onclick="activateFormula(${f.id})">Activate</button>`}</td>
+    </tr>`).join("");
+}
+
+async function validateFormula(){
+  const itemKey = document.getElementById("formula-item-key").value;
+  const expression = document.getElementById("new-formula-expr").value;
+  try{
+    await api("/admin/formulas/validate", { method: "POST", body: JSON.stringify({ itemKey, expression }) });
+    toast("Formula is valid");
+  }catch(e){ toast(e.message, true); }
+}
+
+async function createFormula(){
+  const payload = {
+    itemKey: document.getElementById("formula-item-key").value,
+    name: document.getElementById("new-formula-name").value,
+    expression: document.getElementById("new-formula-expr").value,
+  };
+  if (!payload.name || !payload.expression){ toast("Name and expression are required", true); return; }
+  try{
+    await api("/admin/formulas/", { method: "POST", body: JSON.stringify(payload) });
+    toast("Formula saved");
+    document.getElementById("new-formula-name").value = "";
+    document.getElementById("new-formula-expr").value = "";
+    loadFormulas();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function activateFormula(id){
+  try{
+    await api("/admin/formulas/" + id + "/activate", { method: "POST" });
+    toast("Formula activated");
+    loadFormulas();
+  }catch(e){ toast(e.message, true); }
+}
+
+/* ---------------- Submissions ---------------- */
+let SUBMISSIONS_CACHE = [];
+
+async function loadSubmissions(){
+  SUBMISSIONS_CACHE = await api("/admin/submissions/");
+  const tbody = document.getElementById("submissions-table");
+  if (!SUBMISSIONS_CACHE.length){ tbody.innerHTML = '<tr><td colspan="7" class="empty">No submissions yet.</td></tr>'; return; }
+  tbody.innerHTML = SUBMISSIONS_CACHE.map(s => `
+    <tr>
+      <td class="mono">${s.reference || "—"}</td>
+      <td>${s.fullName}<br><span class="helptext">${s.email}</span></td>
+      <td>${s.bandwidthMbps} Mbps</td>
+      <td class="num">${fmtMoney(s.grandTotal)}</td>
+      <td>
+        <select onchange="updateSubmissionStatus(${s.id}, this.value)">
+          ${["new","reviewed","quoted","closed"].map(st => `<option value="${st}" ${s.status===st?"selected":""}>${st}</option>`).join("")}
+        </select>
+      </td>
+      <td>${fmtDate(s.createdAt)}</td>
+      <td><button onclick="viewSubmission(${s.id})">View</button></td>
+    </tr>`).join("");
+}
+
+async function updateSubmissionStatus(id, status){
+  try{
+    await api("/admin/submissions/" + id + "/status", { method: "PATCH", body: JSON.stringify({ status }) });
+    toast("Status updated");
+  }catch(e){ toast(e.message, true); loadSubmissions(); }
+}
+
+function viewSubmission(id){
+  const s = SUBMISSIONS_CACHE.find(x => x.id === id);
+  if (!s) return;
+  const lineRows = items => items.map(i => `<tr><td>${i.description}</td><td class="num">${i.qty}</td><td class="num">${fmtMoney(i.rate)}</td><td class="num">${fmtMoney(i.amount)}</td></tr>`).join("");
+  openModal(`
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3>${s.reference || "Submission #" + s.id}</h3>
+    <p class="helptext">${s.fullName} · ${s.email} · ${s.phone}</p>
+    <p class="helptext">${s.siteAddress}</p>
+    ${s.notes ? `<p class="helptext">Notes: ${s.notes}</p>` : ""}
+    <table style="margin-top:14px">
+      <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+      <tbody>${lineRows(s.nrcItems)}${lineRows(s.arcItems)}</tbody>
+    </table>
+    <p style="margin-top:10px" class="num">Total NRC: ${fmtMoney(s.totalNRC)} &nbsp;·&nbsp; Total ARC: ${fmtMoney(s.totalARC)} &nbsp;·&nbsp; <strong>Grand total: ${fmtMoney(s.grandTotal)}</strong></p>
+  `);
+}
+
+/* ---------------- Admins ---------------- */
+async function loadAdmins(){
+  const admins = await api("/auth/admins");
+  const tbody = document.getElementById("admins-table");
+  tbody.innerHTML = admins.map(a => `
+    <tr>
+      <td>${a.fullName}</td>
+      <td>${a.email}</td>
+      <td>${a.isSuperadmin ? "Superadmin" : "Admin"}</td>
+      <td><span class="pill ${a.isActive ? "on" : "off"}">${a.isActive ? "active" : "inactive"}</span></td>
+      <td>${(!a.isSuperadmin && a.isActive) ? `<button class="danger" onclick="deactivateAdmin(${a.id})">Deactivate</button>` : ""}</td>
+    </tr>`).join("");
+}
+
+async function createAdmin(){
+  const payload = {
+    fullName: document.getElementById("new-admin-name").value,
+    email: document.getElementById("new-admin-email").value,
+    password: document.getElementById("new-admin-password").value,
+  };
+  if (!payload.fullName || !payload.email || !payload.password){ toast("All fields are required", true); return; }
+  try{
+    await api("/auth/admins", { method: "POST", body: JSON.stringify(payload) });
+    toast("Admin created");
+    document.getElementById("new-admin-name").value = "";
+    document.getElementById("new-admin-email").value = "";
+    document.getElementById("new-admin-password").value = "";
+    loadAdmins();
+  }catch(e){ toast(e.message, true); }
+}
+
+async function deactivateAdmin(id){
+  if (!confirm("Deactivate this admin?")) return;
+  try{
+    await api("/auth/admins/" + id + "/deactivate", { method: "PATCH" });
+    toast("Admin deactivated");
+    loadAdmins();
+  }catch(e){ toast(e.message, true); }
+}
+</script>
+</body>
+</html>
