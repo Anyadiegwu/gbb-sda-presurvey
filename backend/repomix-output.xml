@@ -1,0 +1,2441 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.env.example
+.gitignore
+app/__init__.py
+app/core/__init__.py
+app/core/config.py
+app/core/database.py
+app/core/schema.py
+app/core/security.py
+app/features/__init__.py
+app/features/auth/__init__.py
+app/features/auth/model.py
+app/features/auth/router.py
+app/features/auth/schema.py
+app/features/bandwidth/__init__.py
+app/features/bandwidth/model.py
+app/features/bandwidth/router.py
+app/features/bandwidth/schema.py
+app/features/boq_items/__init__.py
+app/features/boq_items/calculator.py
+app/features/boq_items/model.py
+app/features/boq_items/repository.py
+app/features/boq_items/router.py
+app/features/boq_items/schema.py
+app/features/formula/__init__.py
+app/features/formula/engine.py
+app/features/formula/model.py
+app/features/formula/router.py
+app/features/formula/schema.py
+app/features/manholes/__init__.py
+app/features/manholes/model.py
+app/features/manholes/repository.py
+app/features/manholes/router.py
+app/features/manholes/schema.py
+app/features/pricing/__init__.py
+app/features/pricing/model.py
+app/features/pricing/router.py
+app/features/pricing/schema.py
+app/features/quotes/__init__.py
+app/features/quotes/router.py
+app/features/quotes/schema.py
+app/features/quotes/service.py
+app/features/routes/__init__.py
+app/features/routes/model.py
+app/features/routes/repository.py
+app/features/routes/router.py
+app/features/routes/schema.py
+app/features/submissions/__init__.py
+app/features/submissions/model.py
+app/features/submissions/router.py
+app/features/submissions/schema.py
+app/integrations/__init__.py
+app/integrations/google_maps.py
+app/integrations/kml_parser.py
+app/main.py
+pyproject.toml
+README.md
+seed.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".env.example">
+# Database
+DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/fiber_boq
+
+# Auth
+JWT_SECRET_KEY=change-this-to-a-long-random-string
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
+
+# Google Maps (SERVER key only — Geocoding API + Directions API enabled,
+# restricted by server IP in Google Cloud Console. Never expose this key
+# to the frontend.)
+GOOGLE_MAPS_SERVER_KEY=your-server-side-google-maps-api-key
+
+# CORS
+FRONTEND_URL=http://localhost:3000
+</file>
+
+<file path=".gitignore">
+__pycache__/
+*.pyc
+.venv/
+.env
+.pytest_cache/
+*.egg-info/
+</file>
+
+<file path="app/__init__.py">
+
+</file>
+
+<file path="app/core/__init__.py">
+
+</file>
+
+<file path="app/core/config.py">
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL")
+DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES"))
+
+GOOGLE_MAPS_SERVER_KEY = os.getenv("GOOGLE_MAPS_SERVER_KEY")
+
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+</file>
+
+<file path="app/core/database.py">
+from sqlmodel import SQLModel, Session, create_engine
+from app.core.config import DATABASE_URL
+
+engine = create_engine(DATABASE_URL, echo=False)
+
+
+def init_db() -> None:
+    """Create tables. In production, use Alembic migrations instead."""
+    SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+</file>
+
+<file path="app/core/schema.py">
+"""
+Shared Pydantic base for every public-facing request/response schema.
+
+The frontend (agreed design) uses camelCase field names throughout
+(e.g. totalDistanceMeters, providesOwnRack). Python/FastAPI convention is
+snake_case. CamelModel bridges the two: internal code stays snake_case,
+JSON in/out is camelCase automatically.
+
+populate_by_name=True means incoming request bodies accept EITHER
+camelCase (the alias) or snake_case (the python field name) -- handy for
+testing with curl/Swagger, and harmless for the real frontend which will
+only ever send camelCase.
+"""
+
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
+
+
+class CamelModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+</file>
+
+<file path="app/core/security.py">
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlmodel import Session, select
+
+from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
+from app.core.database import get_session
+from app.features.auth.model import AdminUser
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+bearer_scheme = HTTPBearer()
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(subject: str, expires_minutes: Optional[int] = None) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_minutes or JWT_EXPIRE_MINUTES
+    )
+    payload = {"sub": subject, "exp": expire}
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def get_current_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    session: Session = Depends(get_session),
+) -> AdminUser:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate admin credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    admin = session.exec(select(AdminUser).where(AdminUser.email == email)).first()
+    if admin is None or not admin.is_active:
+        raise credentials_exception
+    return admin
+
+
+def get_current_superadmin(
+    current_admin: AdminUser = Depends(get_current_admin),
+) -> AdminUser:
+    if not current_admin.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a superadmin can perform this action",
+        )
+    return current_admin
+</file>
+
+<file path="app/features/__init__.py">
+
+</file>
+
+<file path="app/features/auth/__init__.py">
+
+</file>
+
+<file path="app/features/auth/model.py">
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class AdminUser(SQLModel, table=True):
+    __tablename__ = "admin_users"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(index=True, unique=True)
+    full_name: str
+    hashed_password: str
+    is_superadmin: bool = Field(default=False)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/auth/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
+from app.core.database import get_session
+from app.core.security import (
+    create_access_token,
+    hash_password,
+    verify_password,
+    get_current_admin,
+    get_current_superadmin,
+)
+from app.features.auth.model import AdminUser
+from app.features.auth.schema import AdminCreate, AdminLogin, AdminRead, Token
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/login", response_model=Token)
+def login_admin(payload: AdminLogin, session: Session = Depends(get_session)):
+    admin = session.exec(
+        select(AdminUser).where(AdminUser.email == payload.email)
+    ).first()
+    if not admin or not verify_password(payload.password, admin.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not admin.is_active:
+        raise HTTPException(status_code=403, detail="This admin account is inactive")
+
+    token = create_access_token(subject=admin.email)
+    return Token(access_token=token)
+
+
+@router.get("/me", response_model=AdminRead)
+def read_current_admin(current_admin: AdminUser = Depends(get_current_admin)):
+    return current_admin
+
+
+# --- Admin account management (superadmin only) ---
+# There's no public/open way to create an admin account anymore. The first
+# admin is created by seed.py as a superadmin; every admin after that is
+# created here by an existing superadmin.
+
+@router.get(
+    "/admins",
+    response_model=List[AdminRead],
+    dependencies=[Depends(get_current_superadmin)],
+)
+def list_admins(session: Session = Depends(get_session)):
+    return session.exec(select(AdminUser)).all()
+
+
+@router.post(
+    "/admins",
+    response_model=AdminRead,
+    dependencies=[Depends(get_current_superadmin)],
+)
+def create_admin(payload: AdminCreate, session: Session = Depends(get_session)):
+    existing = session.exec(
+        select(AdminUser).where(AdminUser.email == payload.email)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    admin = AdminUser(
+        email=payload.email,
+        full_name=payload.full_name,
+        hashed_password=hash_password(payload.password),
+        is_superadmin=False,
+    )
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    return admin
+
+
+@router.patch(
+    "/admins/{admin_id}/deactivate",
+    response_model=AdminRead,
+    dependencies=[Depends(get_current_superadmin)],
+)
+def deactivate_admin(admin_id: int, session: Session = Depends(get_session)):
+    admin = session.get(AdminUser, admin_id)
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if admin.is_superadmin:
+        raise HTTPException(status_code=400, detail="Cannot deactivate a superadmin")
+    admin.is_active = False
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    return admin
+</file>
+
+<file path="app/features/auth/schema.py">
+from pydantic import EmailStr
+
+from app.core.schema import CamelModel
+
+
+class AdminCreate(CamelModel):
+    email: EmailStr
+    full_name: str
+    password: str
+
+
+class AdminLogin(CamelModel):
+    email: EmailStr
+    password: str
+
+
+class Token(CamelModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AdminRead(CamelModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    is_superadmin: bool
+    is_active: bool
+</file>
+
+<file path="app/features/bandwidth/__init__.py">
+
+</file>
+
+<file path="app/features/bandwidth/model.py">
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class BandwidthTier(SQLModel, table=True):
+    __tablename__ = "bandwidth_tiers"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    label: str  # e.g. "50 Mbps", "1 Gbps"
+    mbps: int
+    base_price: float  # flat equipment/tier cost the formula can reference
+    is_active: bool = Field(default=True)
+</file>
+
+<file path="app/features/bandwidth/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.bandwidth.model import BandwidthTier
+from app.features.bandwidth.schema import (
+    BandwidthTierCreate,
+    BandwidthTierRead,
+    BandwidthTierUpdate,
+)
+
+router = APIRouter(prefix="/admin/bandwidth-tiers", tags=["admin: bandwidth tiers"])
+public_router = APIRouter(prefix="/bandwidth-tiers", tags=["public: bandwidth tiers"])
+
+
+@public_router.get("/", response_model=List[BandwidthTierRead])
+def list_active_tiers(session: Session = Depends(get_session)):
+    """Public endpoint so the customer-facing form can populate the bandwidth dropdown."""
+    return session.exec(
+        select(BandwidthTier).where(BandwidthTier.is_active == True)  # noqa: E712
+    ).all()
+
+
+@router.get("/", response_model=List[BandwidthTierRead], dependencies=[Depends(get_current_admin)])
+def list_all_tiers(session: Session = Depends(get_session)):
+    return session.exec(select(BandwidthTier)).all()
+
+
+@router.post("/", response_model=BandwidthTierRead, dependencies=[Depends(get_current_admin)])
+def create_tier(payload: BandwidthTierCreate, session: Session = Depends(get_session)):
+    tier = BandwidthTier(**payload.model_dump())
+    session.add(tier)
+    session.commit()
+    session.refresh(tier)
+    return tier
+
+
+@router.patch("/{tier_id}", response_model=BandwidthTierRead, dependencies=[Depends(get_current_admin)])
+def update_tier(tier_id: int, payload: BandwidthTierUpdate, session: Session = Depends(get_session)):
+    tier = session.get(BandwidthTier, tier_id)
+    if not tier:
+        raise HTTPException(status_code=404, detail="Bandwidth tier not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(tier, field, value)
+    session.add(tier)
+    session.commit()
+    session.refresh(tier)
+    return tier
+
+
+@router.delete("/{tier_id}", dependencies=[Depends(get_current_admin)])
+def delete_tier(tier_id: int, session: Session = Depends(get_session)):
+    tier = session.get(BandwidthTier, tier_id)
+    if not tier:
+        raise HTTPException(status_code=404, detail="Bandwidth tier not found")
+    session.delete(tier)
+    session.commit()
+    return {"detail": "Bandwidth tier deleted"}
+</file>
+
+<file path="app/features/bandwidth/schema.py">
+from typing import Optional
+from pydantic import BaseModel
+
+
+class BandwidthTierCreate(BaseModel):
+    label: str
+    mbps: int
+    base_price: float
+
+
+class BandwidthTierUpdate(BaseModel):
+    label: Optional[str] = None
+    mbps: Optional[int] = None
+    base_price: Optional[float] = None
+    is_active: Optional[bool] = None
+
+
+class BandwidthTierRead(BaseModel):
+    id: int
+    label: str
+    mbps: int
+    base_price: float
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+</file>
+
+<file path="app/features/boq_items/__init__.py">
+
+</file>
+
+<file path="app/features/boq_items/calculator.py">
+"""
+Turns the set of active BOQItems into a priced NRC/ARC breakdown, given
+the customer's distance, requested bandwidth, and rack preference.
+
+This is the one place item pricing actually happens -- used by
+/quotes/calculate. Every active item (built-in or admin-added custom) is
+included automatically, except "rack" when the customer says they'll
+provide their own.
+"""
+
+from dataclasses import dataclass
+from typing import List, Optional
+
+from sqlmodel import Session, select
+
+from app.features.boq_items.model import BOQItem, ChargeType, ComputationMode
+from app.features.formula.engine import DEFAULT_EXPRESSION, FormulaError, evaluate
+from app.features.formula.model import CalculationFormula
+
+
+class CalculationError(Exception):
+    pass
+
+
+@dataclass
+class ComputedLineItem:
+    description: str
+    qty: float
+    rate: float
+    amount: float
+    unit: str
+    charge_type: ChargeType  # caller formats this to "One-Off"/"Recurring" for the API response
+
+
+@dataclass
+class BOQCalculationResult:
+    line_items: List[ComputedLineItem]
+    total_nrc: float
+    total_arc: float
+    grand_total: float
+
+
+def _resolve_quantity(item: BOQItem, distance_m: float, bandwidth_mbps: float) -> float:
+    if item.key == "fibre":
+        return distance_m
+    if item.key == "bandwidth":
+        return bandwidth_mbps
+    return 1.0
+
+
+def _get_active_formula(session: Session, item_key: str) -> str:
+    formula = session.exec(
+        select(CalculationFormula).where(
+            CalculationFormula.item_key == item_key,
+            CalculationFormula.is_active == True,  # noqa: E712
+        )
+    ).first()
+    return formula.expression if formula else DEFAULT_EXPRESSION
+
+
+def _compute_item_amount(session: Session, item: BOQItem, quantity: float) -> float:
+    if item.computation_mode == ComputationMode.FLAT:
+        return item.rate
+    if item.computation_mode == ComputationMode.QUANTITY:
+        return item.rate * quantity
+    if item.computation_mode == ComputationMode.FORMULA:
+        expression = _get_active_formula(session, item.key)
+        try:
+            return evaluate(item.key, expression, rate=item.rate, quantity=quantity)
+        except FormulaError as exc:
+            raise CalculationError(f"Pricing formula error for '{item.key}': {exc}") from exc
+    raise CalculationError(f"Unknown computation_mode on item '{item.key}'")
+
+
+def calculate_boq(
+    session: Session,
+    distance_m: float,
+    bandwidth_mbps: float,
+    provides_own_rack: bool = False,
+) -> BOQCalculationResult:
+    items = session.exec(
+        select(BOQItem).where(BOQItem.is_active == True)  # noqa: E712
+    ).all()
+
+    line_items: List[ComputedLineItem] = []
+    total_nrc = 0.0
+    total_arc = 0.0
+
+    for item in items:
+        if item.key == "rack" and provides_own_rack:
+            continue  # customer is providing their own rack -- skip this item entirely
+
+        quantity = _resolve_quantity(item, distance_m, bandwidth_mbps)
+        amount = _compute_item_amount(session, item, quantity)
+
+        line_items.append(
+            ComputedLineItem(
+                description=item.name,
+                qty=quantity,
+                rate=item.rate,
+                amount=round(amount, 2),
+                unit=item.unit,
+                charge_type=item.charge_type,
+            )
+        )
+
+        if item.charge_type == ChargeType.ONE_OFF:
+            total_nrc += amount
+        else:
+            total_arc += amount
+
+    return BOQCalculationResult(
+        line_items=line_items,
+        total_nrc=round(total_nrc, 2),
+        total_arc=round(total_arc, 2),
+        grand_total=round(total_nrc + total_arc, 2),
+    )
+</file>
+
+<file path="app/features/boq_items/model.py">
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class ChargeType(str, Enum):
+    ONE_OFF = "one_off"  # NRC -- Non-Recurring Cost
+    RECURRING = "recurring"  # ARC -- Annual/Recurring Cost
+
+
+class ComputationMode(str, Enum):
+    FLAT = "flat"  # amount = rate (quantity is always 1) -- rack, router, custom items
+    QUANTITY = "quantity"  # amount = rate * customer-supplied quantity -- fibre (distance_m), bandwidth (bandwidth_mbps)
+    FORMULA = "formula"  # amount computed via an attached CalculationFormula -- for anything needing custom math
+
+
+class BOQItem(SQLModel, table=True):
+    """
+    Generic billable line item. The four built-ins (fibre, rack, router,
+    bandwidth) are seeded once and should never be deleted (the quote
+    engine looks them up by key) but CAN be freely edited by admin --
+    rate, description, charge_type, computation_mode, all of it.
+
+    Admin can also add arbitrary extra items (is_custom=True) via
+    POST /admin/boq-items/ -- these are automatically included in every
+    quote total alongside the built-ins.
+    """
+
+    __tablename__ = "boq_items"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(index=True, unique=True)  # "fibre" | "rack" | "router" | "bandwidth" | "custom_<slug>"
+    name: str
+    description: Optional[str] = None
+    rate: float
+    unit: str 
+    charge_type: ChargeType = Field(default=ChargeType.ONE_OFF)
+    computation_mode: ComputationMode = Field(default=ComputationMode.FLAT)
+    is_custom: bool = Field(default=False)  # False for the 4 built-ins, True for admin-added extras
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/boq_items/repository.py">
+import re
+from typing import List, Optional
+
+from sqlmodel import Session, select
+
+from app.features.boq_items.model import BOQItem
+
+# Keys the quote engine looks up directly -- these must always exist and
+# are never deletable through the API.
+BUILT_IN_KEYS = {"fibre", "rack", "router", "bandwidth"}
+
+
+def list_items(session: Session, active_only: bool = False) -> List[BOQItem]:
+    query = select(BOQItem)
+    if active_only:
+        query = query.where(BOQItem.is_active == True)  # noqa: E712
+    return list(session.exec(query))
+
+
+def get_item(session: Session, item_id: int) -> Optional[BOQItem]:
+    return session.get(BOQItem, item_id)
+
+
+def get_item_by_key(session: Session, key: str) -> Optional[BOQItem]:
+    return session.exec(select(BOQItem).where(BOQItem.key == key)).first()
+
+
+def _slugify(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    return slug or "item"
+
+
+def _generate_unique_custom_key(session: Session, name: str) -> str:
+    base = f"custom_{_slugify(name)}"
+    key = base
+    suffix = 2
+    while get_item_by_key(session, key) is not None:
+        key = f"{base}_{suffix}"
+        suffix += 1
+    return key
+
+
+def create_custom_item(session: Session, item: BOQItem) -> BOQItem:
+    item.key = _generate_unique_custom_key(session, item.name)
+    item.is_custom = True
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+def delete_item(session: Session, item: BOQItem) -> None:
+    session.delete(item)
+    session.commit()
+</file>
+
+<file path="app/features/boq_items/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.boq_items import repository
+from app.features.boq_items.model import BOQItem
+from app.features.boq_items.repository import BUILT_IN_KEYS
+from app.features.boq_items.schema import BOQItemCreate, BOQItemRead, BOQItemUpdate
+
+router = APIRouter(prefix="/admin/boq-items", tags=["admin: BOQ items"])
+
+
+@router.get("/", response_model=List[BOQItemRead], dependencies=[Depends(get_current_admin)])
+def list_boq_items(session: Session = Depends(get_session)):
+    return repository.list_items(session, active_only=False)
+
+
+@router.post("/", response_model=BOQItemRead, dependencies=[Depends(get_current_admin)])
+def create_boq_item(payload: BOQItemCreate, session: Session = Depends(get_session)):
+    """Adds a new custom line item. It is automatically included (per its
+    charge_type/computation_mode) in every quote from here on."""
+    item = BOQItem(**payload.model_dump())
+    return repository.create_custom_item(session, item)
+
+
+@router.patch("/{item_id}", response_model=BOQItemRead, dependencies=[Depends(get_current_admin)])
+def update_boq_item(item_id: int, payload: BOQItemUpdate, session: Session = Depends(get_session)):
+    """Works for both built-in items (fibre/rack/router/bandwidth -- edit
+    rate, description, charge_type, computation_mode freely) and custom
+    ones. The item's `key` never changes."""
+    item = repository.get_item(session, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="BOQ item not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+@router.delete("/{item_id}", dependencies=[Depends(get_current_admin)])
+def delete_boq_item(item_id: int, session: Session = Depends(get_session)):
+    item = repository.get_item(session, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="BOQ item not found")
+    if item.key in BUILT_IN_KEYS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete the built-in '{item.key}' item -- deactivate it instead (set isActive to false).",
+        )
+    repository.delete_item(session, item)
+    return {"detail": "BOQ item deleted"}
+</file>
+
+<file path="app/features/boq_items/schema.py">
+from datetime import datetime
+from typing import Optional
+
+from app.core.schema import CamelModel
+from app.features.boq_items.model import ChargeType, ComputationMode
+
+
+class BOQItemCreate(CamelModel):
+    """Used for admin-added custom items. key is generated server-side
+    from the name (slugified) -- admin doesn't set it directly."""
+
+    name: str
+    description: Optional[str] = None
+    rate: float
+    unit: str = "each"
+    charge_type: ChargeType = ChargeType.ONE_OFF
+    computation_mode: ComputationMode = ComputationMode.FLAT
+
+
+class BOQItemUpdate(CamelModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    rate: Optional[float] = None
+    unit: Optional[str] = None
+    charge_type: Optional[ChargeType] = None
+    computation_mode: Optional[ComputationMode] = None
+    is_active: Optional[bool] = None
+
+
+class BOQItemRead(CamelModel):
+    id: int
+    key: str
+    name: str
+    description: Optional[str] = None
+    rate: float
+    unit: str
+    charge_type: ChargeType
+    computation_mode: ComputationMode
+    is_custom: bool
+    is_active: bool
+    created_at: datetime
+</file>
+
+<file path="app/features/formula/__init__.py">
+
+</file>
+
+<file path="app/features/formula/engine.py">
+"""
+Safe formula evaluation for BOQ item pricing.
+
+Every formula-mode item gets `rate` (the item's admin-set rate) and
+`quantity` (the customer-driven quantity for that item -- distance_m for
+fibre, bandwidth_mbps for bandwidth, or 1 for flat-style items) as
+variables. Known item keys additionally expose a friendlier named alias
+for `quantity` so formulas read naturally.
+
+We NEVER use eval()/exec() for this -- simpleeval only allows arithmetic
+on a whitelisted set of named variables, so a malicious or broken formula
+can't execute arbitrary code or touch the filesystem/network.
+"""
+
+from typing import Dict, Set
+
+from simpleeval import SimpleEval, InvalidExpression
+
+# Every formula, regardless of item, always has these two.
+BASE_VARIABLES = {"rate", "quantity"}
+
+# Extra named aliases available per item key, purely for formula readability.
+# The value(s) are computed from `quantity` when building the variable dict.
+ITEM_EXTRA_VARIABLES: Dict[str, Set[str]] = {
+    "fibre": {"distance_m", "distance_km"},
+    "bandwidth": {"bandwidth_mbps"},
+}
+
+DEFAULT_EXPRESSION = "quantity * rate"
+
+
+class FormulaError(Exception):
+    pass
+
+
+def get_allowed_variables(item_key: str) -> Set[str]:
+    return BASE_VARIABLES | ITEM_EXTRA_VARIABLES.get(item_key, set())
+
+
+def build_variables(item_key: str, rate: float, quantity: float) -> Dict[str, float]:
+    """Builds the full variable dict for a given item's formula evaluation."""
+    variables = {"rate": rate, "quantity": quantity}
+    if item_key == "fibre":
+        variables["distance_m"] = quantity
+        variables["distance_km"] = quantity / 1000
+    elif item_key == "bandwidth":
+        variables["bandwidth_mbps"] = quantity
+    return variables
+
+
+def validate_expression(item_key: str, expression: str) -> None:
+    """Raises FormulaError if the expression uses a disallowed name or
+    doesn't parse. Call this before saving any admin-submitted formula."""
+    allowed = get_allowed_variables(item_key)
+    dummy_values = {name: 1.0 for name in allowed}
+    evaluator = SimpleEval(names=dummy_values)
+    try:
+        evaluator.eval(expression)
+    except InvalidExpression as exc:
+        raise FormulaError(f"Invalid formula: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001 - surface any parse/name error to the admin
+        raise FormulaError(f"Invalid formula: {exc}") from exc
+
+
+def evaluate(item_key: str, expression: str, rate: float, quantity: float) -> float:
+    """Evaluate an already-validated expression with real values."""
+    variables = build_variables(item_key, rate, quantity)
+    evaluator = SimpleEval(names=variables)
+    try:
+        result = evaluator.eval(expression)
+    except Exception as exc:  # noqa: BLE001
+        raise FormulaError(f"Could not evaluate formula for '{item_key}': {exc}") from exc
+
+    return float(result)
+</file>
+
+<file path="app/features/formula/model.py">
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class CalculationFormula(SQLModel, table=True):
+    """A pricing formula attached to one BOQItem (by key), used when that
+    item's computation_mode is 'formula'. Only one formula per item_key
+    should be is_active=True at a time -- that's the one the quote engine
+    uses. Keeping history (instead of overwriting) means admin can roll
+    back a bad formula edit."""
+
+    __tablename__ = "calculation_formulas"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    item_key: str = Field(index=True)  # matches BOQItem.key, e.g. "fibre" or "bandwidth"
+    name: str
+    expression: str  # e.g. "distance_m * rate" or "bandwidth_mbps * rate"
+    is_active: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/formula/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.boq_items import repository as item_repo
+from app.features.formula.engine import FormulaError, validate_expression
+from app.features.formula.model import CalculationFormula
+from app.features.formula.schema import (
+    FormulaCreate,
+    FormulaRead,
+    FormulaValidateRequest,
+)
+
+router = APIRouter(prefix="/admin/formulas", tags=["admin: calculation formulas"])
+
+
+def _ensure_item_exists(session: Session, item_key: str) -> None:
+    if item_repo.get_item_by_key(session, item_key) is None:
+        raise HTTPException(status_code=404, detail=f"No BOQ item with key '{item_key}' exists")
+
+
+@router.get("/", response_model=List[FormulaRead], dependencies=[Depends(get_current_admin)])
+def list_formulas(item_key: str = None, session: Session = Depends(get_session)):
+    """Optionally filter with ?itemKey=fibre (or bandwidth, etc.)."""
+    query = select(CalculationFormula)
+    if item_key:
+        query = query.where(CalculationFormula.item_key == item_key)
+    return session.exec(query).all()
+
+
+@router.post("/validate", dependencies=[Depends(get_current_admin)])
+def validate_formula(payload: FormulaValidateRequest, session: Session = Depends(get_session)):
+    _ensure_item_exists(session, payload.item_key)
+    try:
+        validate_expression(payload.item_key, payload.expression)
+    except FormulaError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"valid": True}
+
+
+@router.post("/", response_model=FormulaRead, dependencies=[Depends(get_current_admin)])
+def create_formula(payload: FormulaCreate, session: Session = Depends(get_session)):
+    _ensure_item_exists(session, payload.item_key)
+    try:
+        validate_expression(payload.item_key, payload.expression)
+    except FormulaError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    formula = CalculationFormula(
+        item_key=payload.item_key, name=payload.name, expression=payload.expression
+    )
+    session.add(formula)
+    session.commit()
+    session.refresh(formula)
+    return formula
+
+
+@router.post("/{formula_id}/activate", response_model=FormulaRead, dependencies=[Depends(get_current_admin)])
+def activate_formula(formula_id: int, session: Session = Depends(get_session)):
+    """Deactivates every other formula for the SAME item_key and activates
+    this one. Only one active formula per item at a time. Note: this does
+    not change that item's computation_mode -- set it to 'formula' via
+    PATCH /admin/boq-items/{id} for this to actually take effect."""
+    formula = session.get(CalculationFormula, formula_id)
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formula not found")
+
+    siblings = session.exec(
+        select(CalculationFormula).where(CalculationFormula.item_key == formula.item_key)
+    ).all()
+    for f in siblings:
+        f.is_active = f.id == formula_id
+        session.add(f)
+    session.commit()
+    session.refresh(formula)
+    return formula
+</file>
+
+<file path="app/features/formula/schema.py">
+from datetime import datetime
+
+from app.core.schema import CamelModel
+
+
+class FormulaCreate(CamelModel):
+    item_key: str
+    name: str
+    expression: str
+
+
+class FormulaRead(CamelModel):
+    id: int
+    item_key: str
+    name: str
+    expression: str
+    is_active: bool
+    created_at: datetime
+
+
+class FormulaValidateRequest(CamelModel):
+    item_key: str
+    expression: str
+</file>
+
+<file path="app/features/manholes/__init__.py">
+
+</file>
+
+<file path="app/features/manholes/model.py">
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class Manhole(SQLModel, table=True):
+    __tablename__ = "manholes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    latitude: float
+    longitude: float
+    notes: Optional[str] = None
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/manholes/repository.py">
+import math
+from typing import List, Optional
+
+from sqlmodel import Session, select
+
+from app.features.manholes.model import Manhole
+
+
+def list_manholes(session: Session, active_only: bool = True) -> List[Manhole]:
+    query = select(Manhole)
+    if active_only:
+        query = query.where(Manhole.is_active == True)  # noqa: E712
+    return list(session.exec(query))
+
+
+def get_manhole(session: Session, manhole_id: int) -> Optional[Manhole]:
+    return session.get(Manhole, manhole_id)
+
+
+def create_manhole(session: Session, manhole: Manhole) -> Manhole:
+    session.add(manhole)
+    session.commit()
+    session.refresh(manhole)
+    return manhole
+
+
+def delete_manhole(session: Session, manhole: Manhole) -> None:
+    session.delete(manhole)
+    session.commit()
+
+
+def _haversine_meters(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in meters. Used only to shortlist candidates
+    cheaply before spending a Google Maps API call on real routing distance."""
+    R = 6371000  # Earth radius in meters
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(d_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def find_nearest_candidates(
+    session: Session, latitude: float, longitude: float, limit: int = 5
+) -> List[Manhole]:
+    """Cheap straight-line shortlist. We then ask Google Maps for real
+    routing distance only on this shortlist, to keep API costs down."""
+    manholes = list_manholes(session, active_only=True)
+    manholes.sort(
+        key=lambda m: _haversine_meters(latitude, longitude, m.latitude, m.longitude)
+    )
+    return manholes[:limit]
+</file>
+
+<file path="app/features/manholes/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.manholes import repository
+from app.features.manholes.model import Manhole
+from app.features.manholes.schema import ManholeCreate, ManholeRead, ManholeUpdate
+
+router = APIRouter(prefix="/admin/manholes", tags=["admin: manholes"])
+
+
+@router.get("/", response_model=List[ManholeRead], dependencies=[Depends(get_current_admin)])
+def list_manholes(session: Session = Depends(get_session)):
+    return repository.list_manholes(session, active_only=False)
+
+
+@router.post("/", response_model=ManholeRead, dependencies=[Depends(get_current_admin)])
+def create_manhole(payload: ManholeCreate, session: Session = Depends(get_session)):
+    manhole = Manhole(**payload.model_dump())
+    return repository.create_manhole(session, manhole)
+
+
+@router.patch("/{manhole_id}", response_model=ManholeRead, dependencies=[Depends(get_current_admin)])
+def update_manhole(manhole_id: int, payload: ManholeUpdate, session: Session = Depends(get_session)):
+    manhole = repository.get_manhole(session, manhole_id)
+    if not manhole:
+        raise HTTPException(status_code=404, detail="Manhole not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(manhole, field, value)
+    session.add(manhole)
+    session.commit()
+    session.refresh(manhole)
+    return manhole
+
+
+@router.delete("/{manhole_id}", dependencies=[Depends(get_current_admin)])
+def delete_manhole(manhole_id: int, session: Session = Depends(get_session)):
+    manhole = repository.get_manhole(session, manhole_id)
+    if not manhole:
+        raise HTTPException(status_code=404, detail="Manhole not found")
+    repository.delete_manhole(session, manhole)
+    return {"detail": "Manhole deleted"}
+</file>
+
+<file path="app/features/manholes/schema.py">
+from typing import Optional
+
+from app.core.schema import CamelModel
+
+
+class ManholeCreate(CamelModel):
+    name: str
+    latitude: float
+    longitude: float
+    notes: Optional[str] = None
+
+
+class ManholeUpdate(CamelModel):
+    name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ManholeRead(CamelModel):
+    id: int
+    name: str
+    latitude: float
+    longitude: float
+    notes: Optional[str] = None
+    is_active: bool
+</file>
+
+<file path="app/features/pricing/__init__.py">
+
+</file>
+
+<file path="app/features/pricing/model.py">
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlmodel import SQLModel, Field
+
+
+class PricingConfig(SQLModel, table=True):
+    """Generic key/value store for the numeric inputs the formula uses,
+    e.g. price_per_meter, installation_fee, markup_percent.
+    Admin can edit these values without touching the formula itself."""
+
+    __tablename__ = "pricing_config"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key: str = Field(index=True, unique=True)
+    value: float
+    description: Optional[str] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/pricing/router.py">
+from datetime import datetime, timezone
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.pricing.model import PricingConfig
+from app.features.pricing.schema import (
+    PricingConfigCreate,
+    PricingConfigRead,
+    PricingConfigUpdate,
+)
+
+router = APIRouter(prefix="/admin/pricing-config", tags=["admin: pricing config"])
+
+
+@router.get("/", response_model=List[PricingConfigRead], dependencies=[Depends(get_current_admin)])
+def list_pricing_config(session: Session = Depends(get_session)):
+    return session.exec(select(PricingConfig)).all()
+
+
+@router.post("/", response_model=PricingConfigRead, dependencies=[Depends(get_current_admin)])
+def create_pricing_key(payload: PricingConfigCreate, session: Session = Depends(get_session)):
+    existing = session.exec(
+        select(PricingConfig).where(PricingConfig.key == payload.key)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Key already exists, use PATCH to update it")
+    entry = PricingConfig(**payload.model_dump())
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+@router.patch("/{key}", response_model=PricingConfigRead, dependencies=[Depends(get_current_admin)])
+def update_pricing_key(key: str, payload: PricingConfigUpdate, session: Session = Depends(get_session)):
+    entry = session.exec(select(PricingConfig).where(PricingConfig.key == key)).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Pricing key not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(entry, field, value)
+    entry.updated_at = datetime.now(timezone.utc)
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+@router.delete("/{key}", dependencies=[Depends(get_current_admin)])
+def delete_pricing_key(key: str, session: Session = Depends(get_session)):
+    entry = session.exec(select(PricingConfig).where(PricingConfig.key == key)).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Pricing key not found")
+    session.delete(entry)
+    session.commit()
+    return {"detail": "Pricing key deleted"}
+</file>
+
+<file path="app/features/pricing/schema.py">
+from typing import Optional
+from pydantic import BaseModel
+
+
+class PricingConfigCreate(BaseModel):
+    key: str
+    value: float
+    description: Optional[str] = None
+
+
+class PricingConfigUpdate(BaseModel):
+    value: Optional[float] = None
+    description: Optional[str] = None
+
+
+class PricingConfigRead(BaseModel):
+    id: int
+    key: str
+    value: float
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+</file>
+
+<file path="app/features/quotes/__init__.py">
+
+</file>
+
+<file path="app/features/quotes/router.py">
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session
+
+from app.core.database import get_session
+from app.features.quotes.schema import (
+    CalculateQuoteRequest,
+    CalculateQuoteResponse,
+    ResolveAddressRequest,
+    ResolveAddressResponse,
+)
+from app.features.quotes.service import QuoteError, calculate_quote, resolve_address_to_nearest_manhole
+from app.integrations.google_maps import GoogleMapsError
+
+router = APIRouter(prefix="/quotes", tags=["public: quotes"])
+
+
+@router.post("/resolve-address", response_model=ResolveAddressResponse)
+def resolve_address(payload: ResolveAddressRequest, session: Session = Depends(get_session)):
+    """Step 1: customer submits an address -> we geocode it, find the
+    nearest manhole, and return the real routing distance + polyline."""
+    try:
+        return resolve_address_to_nearest_manhole(session, payload.address)
+    except GoogleMapsError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    except QuoteError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/calculate", response_model=CalculateQuoteResponse)
+def calculate(payload: CalculateQuoteRequest, session: Session = Depends(get_session)):
+    """Step 2: customer picks a bandwidth (Mbps) and whether they'll
+    provide their own rack -> we price every active BOQ item against the
+    combined distance from step 1 and return the NRC/ARC breakdown."""
+    try:
+        return calculate_quote(
+            session,
+            total_distance_meters=payload.total_distance_meters,
+            manhole_id=payload.manhole_id,
+            bandwidth_mbps=payload.bandwidth_mbps,
+            provides_own_rack=payload.provides_own_rack,
+        )
+    except QuoteError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+</file>
+
+<file path="app/features/quotes/schema.py">
+from typing import List, Optional
+
+from pydantic import Field
+
+from app.core.schema import CamelModel
+
+
+class ResolveAddressRequest(CamelModel):
+    address: str
+
+
+class ResolveAddressResponse(CamelModel):
+    formatted_address: str
+    customer_latitude: float
+    customer_longitude: float
+
+    manhole_id: int
+    manhole_name: str
+    customer_to_manhole_meters: float  # road-routed distance (Google Directions)
+    route_polyline: Optional[str] = None  # customer -> manhole road path
+
+    fiberline_route_id: Optional[int] = None
+    fiberline_route_name: Optional[str] = None
+    manhole_to_fiberline_meters: float = 0.0  # straight-line tap distance
+
+    total_distance_meters: float  # customer_to_manhole + manhole_to_fiberline -- feed this into /quotes/calculate
+
+
+class CalculateQuoteRequest(CamelModel):
+    total_distance_meters: float
+    manhole_id: int
+    bandwidth_mbps: float
+    provides_own_rack: bool = False
+
+
+class LineItem(CamelModel):
+    description: str
+    qty: float
+    rate: float
+    amount: float
+    unit: str
+    type: str  # "One-Off" or "Recurring" -- matches the frontend's row.type exactly
+
+
+class CalculateQuoteResponse(CamelModel):
+    manhole_id: int
+    bandwidth_mbps: float
+    total_distance_meters: float
+    nrc_items: List[LineItem]
+    arc_items: List[LineItem]
+    # to_camel() would turn total_nrc/total_arc into totalNrc/totalArc --
+    # explicit aliases here keep the acronym capitalization the frontend expects.
+    total_nrc: float = Field(alias="totalNRC")
+    total_arc: float = Field(alias="totalARC")
+    grand_total: float
+</file>
+
+<file path="app/features/quotes/service.py">
+from sqlmodel import Session
+
+from app.features.boq_items.calculator import CalculationError, calculate_boq
+from app.features.boq_items.model import ChargeType
+from app.features.manholes import repository as manhole_repo
+from app.features.manholes.model import Manhole
+from app.features.quotes.schema import (
+    CalculateQuoteResponse,
+    LineItem,
+    ResolveAddressResponse,
+)
+from app.features.routes import repository as route_repo
+from app.integrations import google_maps
+
+
+class QuoteError(Exception):
+    pass
+
+
+def resolve_address_to_nearest_manhole(
+    session: Session, address: str
+) -> ResolveAddressResponse:
+    lat, lng, formatted_address = google_maps.geocode_address(address)
+
+    # --- Leg 1: customer -> nearest manhole (real road distance) ---
+    candidates = manhole_repo.find_nearest_candidates(session, lat, lng, limit=5)
+    if not candidates:
+        raise QuoteError("No manhole locations have been configured yet.")
+
+    destinations = [(m.latitude, m.longitude) for m in candidates]
+    distances = google_maps.get_distances_to_candidates((lat, lng), destinations)
+
+    best_index = None
+    best_distance = None
+    for index, distance in enumerate(distances):
+        if distance is None:
+            continue
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            best_index = index
+
+    if best_index is None:
+        raise QuoteError("Could not find a routable path to any manhole location.")
+
+    winning_manhole = candidates[best_index]
+    customer_to_manhole_meters = best_distance
+    polyline = google_maps.get_route_polyline(
+        (lat, lng), (winning_manhole.latitude, winning_manhole.longitude)
+    )
+
+    # --- Leg 2: manhole -> nearest point on the fiber backbone line ---
+    # Straight-line/geodesic distance, not road routing -- this is a short
+    # physical tap/splice from the manhole down to the buried cable, not a
+    # trip along a road.
+    fiberline_route_id = None
+    fiberline_route_name = None
+    manhole_to_fiberline_meters = 0.0
+
+    nearest_route = route_repo.find_nearest_route(
+        session, winning_manhole.latitude, winning_manhole.longitude
+    )
+    if nearest_route:
+        fiberline_route_id = nearest_route["route_id"]
+        fiberline_route_name = nearest_route["route_name"]
+        manhole_to_fiberline_meters = nearest_route["distance_meters"]
+    # If no fiber route data has been imported yet, we don't hard-fail the
+    # quote -- manhole_to_fiberline_meters just stays 0.
+
+    total_distance_meters = customer_to_manhole_meters + manhole_to_fiberline_meters
+
+    return ResolveAddressResponse(
+        formatted_address=formatted_address,
+        customer_latitude=lat,
+        customer_longitude=lng,
+        manhole_id=winning_manhole.id,
+        manhole_name=winning_manhole.name,
+        customer_to_manhole_meters=customer_to_manhole_meters,
+        route_polyline=polyline,
+        fiberline_route_id=fiberline_route_id,
+        fiberline_route_name=fiberline_route_name,
+        manhole_to_fiberline_meters=manhole_to_fiberline_meters,
+        total_distance_meters=total_distance_meters,
+    )
+
+
+def _charge_type_label(charge_type: ChargeType) -> str:
+    return "One-Off" if charge_type == ChargeType.ONE_OFF else "Recurring"
+
+
+def calculate_quote(
+    session: Session,
+    total_distance_meters: float,
+    manhole_id: int,
+    bandwidth_mbps: float,
+    provides_own_rack: bool = False,
+) -> CalculateQuoteResponse:
+    manhole = session.get(Manhole, manhole_id)
+    if not manhole:
+        raise QuoteError("Manhole not found.")
+
+    if bandwidth_mbps <= 0:
+        raise QuoteError("bandwidthMbps must be greater than 0.")
+
+    try:
+        result = calculate_boq(
+            session,
+            distance_m=total_distance_meters,
+            bandwidth_mbps=bandwidth_mbps,
+            provides_own_rack=provides_own_rack,
+        )
+    except CalculationError as exc:
+        raise QuoteError(str(exc)) from exc
+
+    nrc_items = []
+    arc_items = []
+    for line in result.line_items:
+        item = LineItem(
+            description=line.description,
+            qty=line.qty,
+            rate=line.rate,
+            amount=line.amount,
+            unit=line.unit,
+            type=_charge_type_label(line.charge_type),
+        )
+        if line.charge_type == ChargeType.ONE_OFF:
+            nrc_items.append(item)
+        else:
+            arc_items.append(item)
+
+    return CalculateQuoteResponse(
+        manhole_id=manhole_id,
+        bandwidth_mbps=bandwidth_mbps,
+        total_distance_meters=total_distance_meters,
+        nrc_items=nrc_items,
+        arc_items=arc_items,
+        total_nrc=result.total_nrc,
+        total_arc=result.total_arc,
+        grand_total=result.grand_total,
+    )
+</file>
+
+<file path="app/features/routes/__init__.py">
+
+</file>
+
+<file path="app/features/routes/model.py">
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+from geoalchemy2 import Geometry
+from sqlalchemy import Column
+from sqlmodel import SQLModel, Field
+
+
+class FiberRoute(SQLModel, table=True):
+    """A single backbone fiber cable path, imported from a KMZ/KML file.
+    geom is a WGS84 LineString (the actual cable route, following its
+    real-world path — often hundreds of vertices, not a straight line)."""
+
+    __tablename__ = "fiber_routes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str  # e.g. "S1 Abuja - Madalla -44.186KM", taken from the KML placemark name
+    source_file: Optional[str] = None  # e.g. "Backbone_Phase_2.kmz", for traceability
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    geom: Any = Field(
+        sa_column=Column(Geometry(geometry_type="LINESTRING", srid=4326), nullable=False)
+    )
+</file>
+
+<file path="app/features/routes/repository.py">
+from typing import List, Optional
+
+from geoalchemy2.shape import from_shape
+from shapely.geometry import LineString
+from sqlmodel import Session, select, text
+
+from app.features.routes.model import FiberRoute
+from app.integrations.kml_parser import ParsedRoute
+
+
+def list_routes(session: Session, active_only: bool = True) -> List[FiberRoute]:
+    query = select(FiberRoute)
+    if active_only:
+        query = query.where(FiberRoute.is_active == True)  # noqa: E712
+    return list(session.exec(query))
+
+
+def get_route(session: Session, route_id: int) -> Optional[FiberRoute]:
+    return session.get(FiberRoute, route_id)
+
+
+def delete_route(session: Session, route: FiberRoute) -> None:
+    session.delete(route)
+    session.commit()
+
+
+def bulk_insert_routes(
+    session: Session, parsed_routes: List[ParsedRoute], source_file: str
+) -> int:
+    """Inserts every parsed route as a new FiberRoute row. Does not
+    dedupe/replace by name — call this once per KMZ file; if you need to
+    re-import the same file, delete the old rows for that source_file first."""
+    count = 0
+    for route in parsed_routes:
+        line = LineString(route.coordinates)  # shapely expects (lon, lat) pairs
+        geom = from_shape(line, srid=4326)
+        session.add(FiberRoute(name=route.name, source_file=source_file, geom=geom))
+        count += 1
+    session.commit()
+    return count
+
+
+def find_nearest_route(
+    session: Session, latitude: float, longitude: float
+) -> Optional[dict]:
+    """
+    Finds the fiber route line closest to the given point, and the
+    straight-line (geodesic) distance in meters to the nearest point on
+    that line.
+
+    Uses PostGIS's <-> KNN operator (backed by the geometry column's GiST
+    index) to cheaply find candidate routes, then computes the exact
+    geography distance for the winner. This scales fine even with dense,
+    many-thousand-vertex route lines.
+    """
+    sql = text(
+        """
+        SELECT
+            id,
+            name,
+            ST_Distance(
+                geom::geography,
+                ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
+            ) AS distance_meters
+        FROM fiber_routes
+        WHERE is_active = true
+        ORDER BY geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
+        LIMIT 1
+        """
+    )
+    result = session.exec(sql, params={"lon": longitude, "lat": latitude}).first()
+    if result is None:
+        return None
+
+    return {
+        "route_id": result.id,
+        "route_name": result.name,
+        "distance_meters": float(result.distance_meters),
+    }
+</file>
+
+<file path="app/features/routes/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlmodel import Session
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.routes import repository
+from app.features.routes.schema import FiberRouteImportResult, FiberRouteRead
+from app.integrations.kml_parser import KmlParseError, parse_routes
+
+router = APIRouter(prefix="/admin/fiber-routes", tags=["admin: fiber routes"])
+
+
+@router.get("/", response_model=List[FiberRouteRead], dependencies=[Depends(get_current_admin)])
+def list_fiber_routes(session: Session = Depends(get_session)):
+    return repository.list_routes(session, active_only=False)
+
+
+@router.post(
+    "/import",
+    response_model=FiberRouteImportResult,
+    dependencies=[Depends(get_current_admin)],
+)
+def import_fiber_routes(file: UploadFile = File(...), session: Session = Depends(get_session)):
+    """Upload a .kmz or .kml file (e.g. exported from Google Earth) and
+    every LineString route inside it is imported as a FiberRoute. Point
+    placemarks (cities/sites) in the file are ignored. Re-uploading the
+    same file adds duplicate rows -- delete the old ones first if you're
+    replacing a route set."""
+    if not file.filename.lower().endswith((".kmz", ".kml")):
+        raise HTTPException(status_code=400, detail="File must be a .kmz or .kml file")
+
+    file_bytes = file.file.read()
+    try:
+        parsed_routes = parse_routes(file_bytes, file.filename)
+    except KmlParseError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if not parsed_routes:
+        raise HTTPException(status_code=400, detail="No route (LineString) placemarks found in file")
+
+    count = repository.bulk_insert_routes(session, parsed_routes, source_file=file.filename)
+    return FiberRouteImportResult(imported_count=count, source_file=file.filename)
+
+
+@router.delete("/{route_id}", dependencies=[Depends(get_current_admin)])
+def delete_fiber_route(route_id: int, session: Session = Depends(get_session)):
+    route = repository.get_route(session, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail="Fiber route not found")
+    repository.delete_route(session, route)
+    return {"detail": "Fiber route deleted"}
+</file>
+
+<file path="app/features/routes/schema.py">
+from datetime import datetime
+from typing import Optional
+
+from app.core.schema import CamelModel
+
+
+class FiberRouteRead(CamelModel):
+    id: int
+    name: str
+    source_file: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+
+
+class FiberRouteImportResult(CamelModel):
+    imported_count: int
+    source_file: str
+</file>
+
+<file path="app/features/submissions/__init__.py">
+
+</file>
+
+<file path="app/features/submissions/model.py">
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlmodel import SQLModel, Field, Column, JSON
+
+
+class BOQSubmission(SQLModel, table=True):
+    __tablename__ = "boq_submissions"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    reference: Optional[str] = Field(default=None, index=True, unique=True)  # e.g. "GBB-2026-000123", set after insert
+
+    # Contact form fields
+    full_name: str
+    company: Optional[str] = None
+    email: str
+    phone: str
+    site_address: str
+    notes: Optional[str] = None
+
+    # Quote snapshot (from the /quotes flow) so historical BOQs stay
+    # accurate even if pricing/formula changes later
+    manhole_id: int
+    customer_to_manhole_meters: float
+    fiberline_route_id: Optional[int] = None
+    manhole_to_fiberline_meters: float = 0.0
+    total_distance_meters: float
+    route_polyline: Optional[str] = None
+
+    bandwidth_mbps: float
+    provides_own_rack: bool = Field(default=False)
+
+    nrc_items: list = Field(default_factory=list, sa_column=Column(JSON))
+    arc_items: list = Field(default_factory=list, sa_column=Column(JSON))
+    total_nrc: float
+    total_arc: float
+    grand_total: float
+
+    status: str = Field(default="new")  # new | reviewed | quoted | closed
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+</file>
+
+<file path="app/features/submissions/router.py">
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
+
+from app.core.database import get_session
+from app.core.security import get_current_admin
+from app.features.submissions.model import BOQSubmission
+from app.features.submissions.schema import (
+    SubmissionCreate,
+    SubmissionRead,
+    SubmissionStatusUpdate,
+)
+
+public_router = APIRouter(prefix="/submissions", tags=["public: submissions"])
+admin_router = APIRouter(prefix="/admin/submissions", tags=["admin: submissions"])
+
+
+@public_router.post("/", response_model=SubmissionRead)
+def create_submission(payload: SubmissionCreate, session: Session = Depends(get_session)):
+    """Customer submits their contact details alongside the quote they
+    were just given (from /quotes/resolve-address + /quotes/calculate),
+    so admin gets the full picture in one record. The reference number is
+    generated server-side to guarantee uniqueness."""
+    submission = BOQSubmission(
+        **payload.model_dump(exclude={"nrc_items", "arc_items"}),
+        nrc_items=[item.model_dump(by_alias=True) for item in payload.nrc_items],
+        arc_items=[item.model_dump(by_alias=True) for item in payload.arc_items],
+    )
+    session.add(submission)
+    session.commit()
+    session.refresh(submission)
+
+    submission.reference = f"GBB-{submission.created_at.year}-{submission.id:06d}"
+    session.add(submission)
+    session.commit()
+    session.refresh(submission)
+
+    # TODO: notify admin (email/Slack/etc.) once a notification channel is decided.
+
+    return submission
+
+
+@admin_router.get("/", response_model=List[SubmissionRead], dependencies=[Depends(get_current_admin)])
+def list_submissions(session: Session = Depends(get_session)):
+    return session.exec(
+        select(BOQSubmission).order_by(BOQSubmission.created_at.desc())
+    ).all()
+
+
+@admin_router.get("/{submission_id}", response_model=SubmissionRead, dependencies=[Depends(get_current_admin)])
+def get_submission(submission_id: int, session: Session = Depends(get_session)):
+    submission = session.get(BOQSubmission, submission_id)
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    return submission
+
+
+@admin_router.patch("/{submission_id}/status", response_model=SubmissionRead, dependencies=[Depends(get_current_admin)])
+def update_submission_status(
+    submission_id: int, payload: SubmissionStatusUpdate, session: Session = Depends(get_session)
+):
+    submission = session.get(BOQSubmission, submission_id)
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+    submission.status = payload.status
+    session.add(submission)
+    session.commit()
+    session.refresh(submission)
+    return submission
+</file>
+
+<file path="app/features/submissions/schema.py">
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import EmailStr, Field
+
+from app.core.schema import CamelModel
+from app.features.quotes.schema import LineItem
+
+
+class SubmissionCreate(CamelModel):
+    # Contact fields
+    full_name: str
+    company: Optional[str] = None
+    email: EmailStr
+    phone: str
+    site_address: str
+    notes: Optional[str] = None
+
+    # Echoed back from the /quotes flow (resolve-address + calculate)
+    manhole_id: int
+    customer_to_manhole_meters: float
+    fiberline_route_id: Optional[int] = None
+    manhole_to_fiberline_meters: float = 0.0
+    total_distance_meters: float
+    route_polyline: Optional[str] = None
+
+    bandwidth_mbps: float
+    provides_own_rack: bool = False
+
+    nrc_items: List[LineItem]
+    arc_items: List[LineItem]
+    total_nrc: float = Field(alias="totalNRC")
+    total_arc: float = Field(alias="totalARC")
+    grand_total: float
+
+
+class SubmissionRead(CamelModel):
+    id: int
+    reference: Optional[str] = None
+    full_name: str
+    company: Optional[str] = None
+    email: str
+    phone: str
+    site_address: str
+    notes: Optional[str] = None
+
+    manhole_id: int
+    customer_to_manhole_meters: float
+    fiberline_route_id: Optional[int] = None
+    manhole_to_fiberline_meters: float
+    total_distance_meters: float
+    route_polyline: Optional[str] = None
+
+    bandwidth_mbps: float
+    provides_own_rack: bool
+
+    nrc_items: List[LineItem]
+    arc_items: List[LineItem]
+    total_nrc: float = Field(alias="totalNRC")
+    total_arc: float = Field(alias="totalARC")
+    grand_total: float
+
+    status: str
+    created_at: datetime
+
+
+class SubmissionStatusUpdate(CamelModel):
+    status: str
+</file>
+
+<file path="app/integrations/__init__.py">
+
+</file>
+
+<file path="app/integrations/google_maps.py">
+"""
+Thin wrapper around the Google Maps server-side APIs.
+
+Uses GOOGLE_MAPS_SERVER_KEY only — this key must be restricted (in Google
+Cloud Console) to your backend server's IP address, with Geocoding API and
+Distance Matrix API and Directions API enabled. Never expose this key to
+the frontend/browser.
+"""
+
+from typing import List, Optional, Tuple
+
+import googlemaps
+
+from app.core.config import GOOGLE_MAPS_SERVER_KEY
+
+
+class GoogleMapsError(Exception):
+    pass
+
+
+def _client() -> googlemaps.Client:
+    if not GOOGLE_MAPS_SERVER_KEY:
+        raise GoogleMapsError(
+            "GOOGLE_MAPS_SERVER_KEY is not set. Add it to your .env file."
+        )
+    return googlemaps.Client(key=GOOGLE_MAPS_SERVER_KEY)
+
+
+def geocode_address(address: str) -> Tuple[float, float, str]:
+    """Returns (latitude, longitude, formatted_address)."""
+    client = _client()
+    results = client.geocode(address)
+    if not results:
+        raise GoogleMapsError(f"Could not geocode address: {address!r}")
+
+    location = results[0]["geometry"]["location"]
+    formatted_address = results[0].get("formatted_address", address)
+    return location["lat"], location["lng"], formatted_address
+
+
+def get_distances_to_candidates(
+    origin: Tuple[float, float], destinations: List[Tuple[float, float]]
+) -> List[Optional[float]]:
+    """
+    One Distance Matrix API call covering every candidate manhole, so we
+    only spend a single request no matter how many candidates we shortlist.
+    Returns distance in meters per destination, in the same order as the
+    input list. A destination Google couldn't route to is returned as None.
+    """
+    client = _client()
+    result = client.distance_matrix(
+        origins=[origin],
+        destinations=destinations,
+        mode="driving",
+    )
+    elements = result["rows"][0]["elements"]
+
+    distances: List[Optional[float]] = []
+    for element in elements:
+        if element.get("status") == "OK":
+            distances.append(element["distance"]["value"])  # meters
+        else:
+            distances.append(None)
+    return distances
+
+
+def get_route_polyline(
+    origin: Tuple[float, float], destination: Tuple[float, float]
+) -> Optional[str]:
+    """
+    One Directions API call for just the winning candidate, to get the
+    encoded polyline for drawing the route on a map. Returns None if no
+    route is found (distance/BOQ can still proceed without a polyline).
+    """
+    client = _client()
+    routes = client.directions(origin=origin, destination=destination, mode="driving")
+    if not routes:
+        return None
+    return routes[0]["overview_polyline"]["points"]
+</file>
+
+<file path="app/integrations/kml_parser.py">
+"""
+Parses KML/KMZ files (as exported from Google Earth) into a flat list of
+named LineString routes, ignoring styling, folders, and any Point
+placemarks (cities/sites are a separate concern from route geometry).
+
+A KMZ is just a zip file containing a doc.kml plus assets; we only need
+the KML.
+"""
+
+import zipfile
+from dataclasses import dataclass
+from io import BytesIO
+from typing import List
+from xml.etree import ElementTree as ET
+
+KML_NS = {"kml": "http://www.opengis.net/kml/2.2"}
+
+
+@dataclass
+class ParsedRoute:
+    name: str
+    coordinates: List[tuple]  # list of (lon, lat) — matches KML's lon,lat[,alt] order
+
+
+class KmlParseError(Exception):
+    pass
+
+
+def _extract_kml_bytes(file_bytes: bytes, filename: str) -> bytes:
+    if filename.lower().endswith(".kmz"):
+        with zipfile.ZipFile(BytesIO(file_bytes)) as z:
+            kml_names = [n for n in z.namelist() if n.lower().endswith(".kml")]
+            if not kml_names:
+                raise KmlParseError("No .kml file found inside the .kmz archive")
+            # doc.kml is the conventional main file; fall back to the first match
+            preferred = next((n for n in kml_names if n.lower() == "doc.kml"), kml_names[0])
+            return z.read(preferred)
+    return file_bytes
+
+
+def _all_placemarks(element) -> List[ET.Element]:
+    result = list(element.findall("kml:Placemark", KML_NS))
+    for folder in element.findall("kml:Folder", KML_NS):
+        result.extend(_all_placemarks(folder))
+    return result
+
+
+def parse_routes(file_bytes: bytes, filename: str) -> List[ParsedRoute]:
+    """Returns every LineString placemark in the file as a ParsedRoute.
+    Point placemarks (cities/sites) are skipped — this is route geometry only."""
+    kml_bytes = _extract_kml_bytes(file_bytes, filename)
+
+    try:
+        root = ET.fromstring(kml_bytes)
+    except ET.ParseError as exc:
+        raise KmlParseError(f"Could not parse KML: {exc}") from exc
+
+    document = root.find("kml:Document", KML_NS)
+    if document is None:
+        raise KmlParseError("No <Document> element found in KML")
+
+    routes: List[ParsedRoute] = []
+    for placemark in _all_placemarks(document):
+        line_string = placemark.find("kml:LineString", KML_NS)
+        if line_string is None:
+            continue  # not a route (likely a Point/site placemark) — skip
+
+        name_el = placemark.find("kml:name", KML_NS)
+        name = (name_el.text or "").strip() if name_el is not None else "(unnamed route)"
+
+        coords_el = line_string.find("kml:coordinates", KML_NS)
+        if coords_el is None or not coords_el.text:
+            continue
+
+        coordinates = []
+        for raw in coords_el.text.split():
+            parts = raw.split(",")
+            if len(parts) < 2:
+                continue
+            lon, lat = float(parts[0]), float(parts[1])
+            coordinates.append((lon, lat))
+
+        if len(coordinates) < 2:
+            continue  # not a valid line
+
+        routes.append(ParsedRoute(name=name, coordinates=coordinates))
+
+    return routes
+</file>
+
+<file path="app/main.py">
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import FRONTEND_URL
+from app.core.database import init_db
+
+from app.features.auth.router import router as auth_router
+from app.features.manholes.router import router as manholes_admin_router
+from app.features.boq_items.router import router as boq_items_admin_router
+from app.features.formula.router import router as formula_admin_router
+from app.features.routes.router import router as routes_admin_router
+from app.features.quotes.router import router as quotes_router
+from app.features.submissions.router import public_router as submissions_public_router, admin_router as submissions_admin_router
+
+app = FastAPI(title="Fiber BOQ API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+def on_startup():
+    # Quick-start table creation for development. Swap for Alembic
+    # migrations before running this against a real production database.
+    init_db()
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+# Admin-only routers (protected inside each router via get_current_admin)
+app.include_router(auth_router)
+app.include_router(manholes_admin_router)
+app.include_router(boq_items_admin_router)
+app.include_router(formula_admin_router)
+app.include_router(routes_admin_router)
+app.include_router(submissions_admin_router)
+
+# Public/customer-facing routers
+app.include_router(quotes_router)
+app.include_router(submissions_public_router)
+</file>
+
+<file path="pyproject.toml">
+[project]
+name = "fiber-boq-backend"
+version = "0.1.0"
+description = "Admin-managed BOQ generator for fiber ISP connections: customer address -> nearest POP manhole -> distance -> bandwidth -> priced BOQ"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.6",
+    "sqlmodel==0.0.22",
+    "psycopg[binary]==3.2.9",
+    "alembic==1.13.2",
+    "pydantic-settings==2.5.2",
+    "email-validator==2.2.0",
+    "python-dotenv==1.0.1",
+    "python-jose[cryptography]==3.3.0",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt==4.0.1",
+    "python-multipart==0.0.9",
+    "simpleeval==1.0.3",
+    "googlemaps==4.10.0",
+    "geoalchemy2==0.15.2",
+    "shapely==2.0.6",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "httpx>=0.27.0",
+]
+
+[tool.uv]
+package = false
+</file>
+
+<file path="README.md">
+# Fiber BOQ Backend
+
+Admin-managed BOQ generator for a fiber ISP: a customer enters an address,
+we find the nearest POP manhole and the real routing distance via Google
+Maps, the customer picks a bandwidth tier, and a priced BOQ is generated
+from admin-configurable pricing (and, optionally, an admin-rewritten
+pricing formula).
+
+## Stack
+- FastAPI + SQLModel
+- PostgreSQL
+- Google Maps (Geocoding, Distance Matrix, Directions APIs) — server-side only
+- `simpleeval` for safe, sandboxed formula evaluation (no `eval()`)
+- JWT auth for the admin side; customer-facing endpoints are public
+
+## Setup (using [uv](https://docs.astral.sh/uv/))
+
+```bash
+# 1. Install dependencies (creates .venv automatically)
+uv sync
+
+# 2. Copy env file and fill in real values
+cp .env.example .env
+# - set DATABASE_URL to your Postgres instance
+# - set GOOGLE_MAPS_SERVER_KEY (a server-restricted key with Geocoding,
+#   Distance Matrix, and Directions APIs enabled — see note below)
+# - set JWT_SECRET_KEY to a long random string
+
+# 3. Seed an initial admin account + default pricing/formula
+uv run python seed.py
+
+# 4. Run the dev server
+uv run uvicorn app.main:app --reload
+```
+
+API docs available at `http://localhost:8000/docs` once running.
+
+## Google Maps key setup
+Create **two separate** API keys in the same Google Cloud project:
+- **Server key** (`GOOGLE_MAPS_SERVER_KEY` in `.env`): enable Geocoding API,
+  Distance Matrix API, Directions API. Restrict it by server IP address.
+  This is the only key this backend uses.
+- **Browser key** (only needed if/when the frontend shows a live map):
+  enable Maps JavaScript API only, restrict by HTTP referrer to your
+  domain. Never give this key Geocoding/Directions scopes.
+
+## Project layout
+```
+app/
+  core/            # config, db session, JWT/password auth
+  integrations/
+    google_maps.py # geocoding + distance/directions wrapper
+  features/
+    auth/          # admin login/register
+    manholes/      # admin CRUD on POP manhole locations
+    bandwidth/     # admin CRUD on bandwidth tiers (public read for the form)
+    pricing/       # admin-editable key/value pricing inputs
+    formula/       # admin-editable calculation formula (sandboxed eval)
+    quotes/        # public: resolve-address -> nearest manhole -> calculate BOQ
+    submissions/   # public: submit contact form + quote; admin: view/manage
+```
+
+## Customer flow
+1. `POST /quotes/resolve-address {"address": "..."}` → geocodes, shortlists
+   nearby manholes cheaply (Haversine), then makes **one** Distance Matrix
+   API call to get real routing distance to all candidates, then **one**
+   Directions API call for the winning candidate's polyline.
+2. `GET /bandwidth-tiers/` → populate the bandwidth dropdown.
+3. `POST /quotes/calculate {...}` → runs the active pricing formula against
+   distance + tier + admin pricing config, returns line items + total.
+4. `POST /submissions/` → customer submits contact details alongside the
+   quote just generated; this is what shows up in the admin dashboard.
+
+## Admin capabilities
+- `POST /auth/login` → get a JWT, send as `Authorization: Bearer <token>`
+  on every `/admin/*` route.
+- `/admin/manholes` — add/edit/remove manhole locations (lat/lng).
+- `/admin/bandwidth-tiers` — add/edit/remove tiers and their base price.
+- `/admin/pricing-config` — edit `price_per_meter`, `installation_fee`,
+  `markup_percent`, or add new keys (just remember to reference any new
+  key in the active formula for it to actually be used).
+- `/admin/formulas` — write a new pricing expression, validate it
+  (`POST /admin/formulas/validate`), then activate it. Only one formula
+  is active at a time. Allowed variable names: `distance_m`,
+  `distance_km`, `price_per_meter`, `tier_base_price`,
+  `installation_fee`, `markup_percent`.
+- `/admin/submissions` — view every BOQ request with the customer's
+  contact info, quoted distance, line items, and total.
+
+## Before production
+- Replace `init_db()` in `app/main.py` with Alembic migrations.
+- Lock down `POST /auth/register` (it currently lets anyone create an
+  admin account — fine for initial setup, not fine to leave open).
+- Add rate limiting to the public `/quotes/*` endpoints — every call can
+  trigger billed Google Maps API requests.
+- Decide on and wire up an admin notification channel (email/Slack) in
+  `submissions/router.py` where the `TODO` is.
+- Decide on the frontend and CORS origin(s) in `.env` (`FRONTEND_URL`).
+</file>
+
+<file path="seed.py">
+"""
+One-off script to seed the initial superadmin account and the four
+built-in BOQ items (fibre, rack, router, bandwidth) with sane default
+rates, so you have something to log in with and working defaults on day
+one. Admin can edit every rate (and, if needed, attach a custom formula)
+from there.
+
+Run with: uv run python seed.py
+"""
+
+from sqlmodel import Session, select
+
+from app.core.config import DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD
+from app.core.database import engine, init_db
+from app.core.security import hash_password
+from app.features.auth.model import AdminUser
+from app.features.boq_items.model import BOQItem, ChargeType, ComputationMode
+
+# key -> (name, rate, unit, charge_type, computation_mode)
+DEFAULT_BOQ_ITEMS = {
+    "fibre": (
+        "Fibre cable run",
+        2500.0,  # NGN per meter
+        "m",
+        ChargeType.ONE_OFF,
+        ComputationMode.QUANTITY,  # amount = rate * distance_m
+    ),
+    "rack": (
+        "12U rack",
+        150000.0,  # flat NGN
+        "each",
+        ChargeType.ONE_OFF,
+        ComputationMode.FLAT,
+    ),
+    "router": (
+        "Router lease",
+        25000.0,  # flat NGN, recurring
+        "each",
+        ChargeType.RECURRING,
+        ComputationMode.FLAT,
+    ),
+    "bandwidth": (
+        "Bandwidth",
+        3500.0,  # NGN per Mbps, recurring
+        "Mbps",
+        ChargeType.RECURRING,
+        ComputationMode.QUANTITY,  # amount = rate * bandwidth_mbps
+    ),
+}
+
+
+def run():
+    init_db()
+    with Session(engine) as session:
+        if not session.exec(
+            select(AdminUser).where(AdminUser.email == DEFAULT_ADMIN_EMAIL)
+        ).first():
+            session.add(
+                AdminUser(
+                    email=DEFAULT_ADMIN_EMAIL,
+                    full_name="Default Superadmin",
+                    hashed_password=hash_password(DEFAULT_ADMIN_PASSWORD),
+                    is_superadmin=True,
+                )
+            )
+            print(
+                f"Created superadmin: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD} "
+                "(change this password, and set DEFAULT_ADMIN_EMAIL/PASSWORD in .env "
+                "before running this in production!)"
+            )
+
+        for key, (name, rate, unit, charge_type, computation_mode) in DEFAULT_BOQ_ITEMS.items():
+            if not session.exec(select(BOQItem).where(BOQItem.key == key)).first():
+                session.add(
+                    BOQItem(
+                        key=key,
+                        name=name,
+                        rate=rate,
+                        unit=unit,
+                        charge_type=charge_type,
+                        computation_mode=computation_mode,
+                        is_custom=False,
+                    )
+                )
+                print(f"Seeded BOQ item: {key} ({name}) = {rate}/{unit}")
+
+        session.commit()
+
+
+if __name__ == "__main__":
+    run()
+</file>
+
+</files>

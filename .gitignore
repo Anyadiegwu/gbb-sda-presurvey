@@ -1,6 +1,4 @@
-node_modules
-dist
+repomix-output.xml
 .env
-.env.*
-!.env.example
-.DS_Store
+venv/
+.venv/
