@@ -2,92 +2,86 @@
 // -----------------------------------------------------------------------------
 // Step 3 of the estimator.
 //
-// This component is intentionally mostly presentational. The pricing
-// calculation has already happened in App through calculateEstimate().
+// This component is responsible for displaying the calculated estimate
+// to the customer.
 //
-// It:
-//   1. displays NRC rows
-//   2. displays ARC rows
-//   3. displays totals
-//   4. creates a basic Excel BOQ when the user clicks Export to Excel
+// IMPORTANT:
+// The actual pricing calculation happens in App through calculateEstimate().
+// This component only displays the results.
+//
+// Customers see:
+//   1. Item description
+//   2. Quantity (QTY)
+//   3. NRC amount OR ARC amount
+//   4. Total NRC
+//   5. Total ARC
+//   6. Grand Total
+//
+// The internal pricing rates are NOT displayed to customers.
 // -----------------------------------------------------------------------------
 
-import * as XLSX from 'xlsx'
 import { formatNaira, formatNairaWhole } from '../utils/format'
 
-// Build an Excel workbook from the calculated estimate.
+
+// -----------------------------------------------------------------------------
+// Format quantity values for customer display.
+// -----------------------------------------------------------------------------
 //
-// The array-of-arrays structure (`aoa`) is convenient for a basic BOQ because
-// each inner array represents one spreadsheet row.
-function exportEstimateToExcel(calc) {
-  const rows = [
-    ['S/N', 'Item Description', 'QTY', 'Rate', 'NRC', 'ARC'],
+// The pricing engine may calculate a value with many decimal places.
+//
+// Example:
+//     7827.587381792852
+//
+// We don't want the customer to see all those decimal places.
+//
+// So we display:
+//     7,827.59
+//
+// However, if the quantity is a whole number, such as 1 or 20,
+// we display it without unnecessary decimal places.
+//
+// Examples:
+//     1       → 1
+//     20      → 20
+//     7827.5  → 7,827.5
+//     7827.58 → 7,827.58
+//
+// The original value is NOT changed. This is only for display.
+// -----------------------------------------------------------------------------
 
-    // Section heading for one-off charges.
-    ['', 'One-Off', '', '', '', ''],
+function formatQuantity(value) {
+  const number = Number(value)
 
-    // NRC rows place their amount in the NRC column.
-    ...calc.nrcRows.map((row, index) => [
-      index + 1,
-      row.description,
-      row.qty,
-      Number(row.rate),
-      Number(row.amount),
-      '',
-    ]),
+  // If the value is not a valid number, just display it as it is.
+  if (!Number.isFinite(number)) {
+    return value
+  }
 
-    // Section heading for recurring charges.
-    ['', 'Recurring', '', '', '', ''],
-
-    // ARC rows place their amount in the ARC column.
-    ...calc.arcRows.map((row, index) => [
-      calc.nrcRows.length + index + 1,
-      row.description,
-      row.qty,
-      Number(row.rate),
-      '',
-      Number(row.amount),
-    ]),
-
-    // Totals.
-    ['', 'Total NRC', '', '', Number(calc.totalNRC), ''],
-    ['', 'Total ARC', '', '', '', Number(calc.totalARC)],
-    ['', 'Grand Total (NRC + ARC)', '', '', '', Number(calc.grandTotal)],
-  ]
-
-  // Convert the JavaScript array into a SheetJS worksheet.
-  const ws = XLSX.utils.aoa_to_sheet(rows)
-
-  // Basic column widths so the exported BOQ is readable.
-  ws['!cols'] = [
-    { wch: 8 },
-    { wch: 48 },
-    { wch: 10 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 16 },
-  ]
-
-  // Create a new workbook and add the BOQ worksheet.
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'BOQ')
-
-  // Ask SheetJS to create/download the Excel file.
-  XLSX.writeFile(
-    wb,
-    `GBB-BOQ-${new Date().toISOString().slice(0, 10)}.xlsx`,
-  )
+  return number.toLocaleString('en-NG', {
+    maximumFractionDigits: 2,
+  })
 }
 
+
+// -----------------------------------------------------------------------------
 // Reusable table-row component.
+// -----------------------------------------------------------------------------
 //
-// `recurring` only changes the empty-state message; the row rendering itself
-// is the same for NRC and ARC.
+// `recurring` tells the component whether these rows belong to ARC.
+//
+// The table has only THREE columns now:
+//
+//     Item Description | QTY | NRC/ARC
+//
+// The pricing RATE is intentionally not displayed to customers.
+// -----------------------------------------------------------------------------
+
 function Rows({ rows, recurring }) {
+  // If there are no rows, show a helpful message instead.
   if (!rows.length) {
     return (
       <tr>
-        <td colSpan="4" className="muted">
+        <td colSpan="3" className="muted">
           No {recurring ? 'recurring' : 'non-recurring'} charges.
         </td>
       </tr>
@@ -96,29 +90,42 @@ function Rows({ rows, recurring }) {
 
   return rows.map(row => (
     <tr key={`${row.description}-${row.amount}`}>
+      {/* Item description */}
       <td>{row.description}</td>
-      <td>{row.qty}</td>
-      <td>
-        {formatNairaWhole(row.rate)}
-        {row.unit === 'm'
-          ? '/m'
-          : row.unit === 'Mbps'
-            ? '/Mbps'
-            : ''}
-      </td>
+
+      {/* Quantity */}
+      <td>{formatQuantity(row.qty)}</td>
+
+      {/* NRC or ARC amount */}
       <td>{formatNairaWhole(row.amount)}</td>
     </tr>
   ))
 }
 
+
+// -----------------------------------------------------------------------------
+// Main EstimateStep component.
+// -----------------------------------------------------------------------------
+
 export default function EstimateStep({ calc, onBack, onContinue }) {
   return (
     <section className="step-panel">
       <div className="card">
+
+        {/* -------------------------------------------------------------------
+            Page heading
+        ------------------------------------------------------------------- */}
+
         <h1>Your Estimated Cost</h1>
+
         <p className="muted">
           Preliminary estimate based on the information provided.
         </p>
+
+
+        {/* ===================================================================
+            NON-RECURRING CHARGES
+        =================================================================== */}
 
         <h3 style={{ marginTop: 20 }}>
           Non-Recurring Charges (NRC)
@@ -126,11 +133,11 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
 
         <div className="table-wrap">
           <table className="estimate-table">
+
             <thead>
               <tr>
                 <th>Item Description</th>
                 <th>QTY</th>
-                <th>Rate (₦)</th>
                 <th>NRC (₦)</th>
               </tr>
             </thead>
@@ -138,8 +145,14 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
             <tbody>
               <Rows rows={calc.nrcRows} />
             </tbody>
+
           </table>
         </div>
+
+
+        {/* ===================================================================
+            ANNUAL RECURRING CHARGES
+        =================================================================== */}
 
         <h3 style={{ marginTop: 20 }}>
           Annual Recurring Charges (ARC)
@@ -147,11 +160,11 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
 
         <div className="table-wrap">
           <table className="estimate-table">
+
             <thead>
               <tr>
                 <th>Item Description</th>
                 <th>QTY</th>
-                <th>Rate (₦)</th>
                 <th>ARC (₦)</th>
               </tr>
             </thead>
@@ -159,24 +172,42 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
             <tbody>
               <Rows rows={calc.arcRows} recurring />
             </tbody>
+
           </table>
         </div>
 
+
+        {/* ===================================================================
+            ESTIMATE SUMMARY
+        =================================================================== */}
+
         <div className="summary-grid">
+
+          {/* Total NRC */}
           <div className="summary-box">
-            <div className="label">TOTAL NRC</div>
+            <div className="label">
+              TOTAL NRC
+            </div>
+
             <div className="amount">
               {formatNaira(calc.totalNRC)}
             </div>
           </div>
 
+
+          {/* Total ARC */}
           <div className="summary-box">
-            <div className="label">TOTAL ARC (Monthly)</div>
+            <div className="label">
+              TOTAL ARC (Monthly)
+            </div>
+
             <div className="amount">
               {formatNaira(calc.totalARC)}
             </div>
           </div>
 
+
+          {/* Grand Total */}
           <div
             className="summary-box"
             style={{ gridColumn: '1/-1' }}
@@ -184,16 +215,25 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
             <div className="label">
               GRAND TOTAL (NRC + ARC)
             </div>
+
             <div className="amount">
               {formatNaira(calc.grandTotal)}
             </div>
           </div>
+
         </div>
+
+
+        {/* ===================================================================
+            STEP ACTIONS
+        =================================================================== */}
 
         <div
           className="step-actions"
           style={{ gap: 10, flexWrap: 'wrap' }}
         >
+
+          {/* Back button */}
           <button
             className="btn btn-text"
             type="button"
@@ -202,6 +242,8 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
             ← Back
           </button>
 
+
+          {/* Right-side actions */}
           <div
             style={{
               display: 'flex',
@@ -210,14 +252,8 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
               marginLeft: 'auto',
             }}
           >
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={() => exportEstimateToExcel(calc)}
-            >
-              Export to Excel
-            </button>
 
+            {/* Continue to Submit step */}
             <button
               className="btn btn-primary"
               type="button"
@@ -225,9 +261,12 @@ export default function EstimateStep({ calc, onBack, onContinue }) {
             >
               Continue →
             </button>
+
           </div>
+
         </div>
+
       </div>
     </section>
   )
-}
+}   

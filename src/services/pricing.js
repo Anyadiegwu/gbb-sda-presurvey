@@ -29,18 +29,21 @@ export const DEFAULT_PRICING = {
       type: 'One-Off',
       unit: 'm',
     },
+
     rack: {
       description: '12U Rack (customer can provide)',
       rate: 195000,
       type: 'One-Off',
       unit: 'each',
     },
+
     router: {
       description: 'Huawei AR611W Router - Lease',
       rate: 262500,
       type: 'Recurring',
       unit: 'each',
     },
+
     bandwidth: {
       description: 'Internet bandwidth service',
       type: 'Recurring',
@@ -48,6 +51,9 @@ export const DEFAULT_PRICING = {
       unit: 'Mbps',
     },
   },
+
+  // Administrator-created BOQ items.
+  additionalItems: [],
 }
 
 // JSON cloning creates a new object instead of returning the same reference.
@@ -105,6 +111,16 @@ export function getPricingConfig() {
 
     // Do not keep the obsolete structure in the active configuration.
     delete merged.items.bandwidth.options
+
+
+    // Preserve administrator-created BOQ items.
+    //
+    // If the saved configuration has no additionalItems array,
+    // use an empty array instead.
+    merged.additionalItems = Array.isArray(saved.additionalItems)
+      ? saved.additionalItems
+      : []
+
 
     return merged
   } catch (error) {
@@ -287,6 +303,68 @@ export function calculateEstimate(draft) {
     bandwidthCost,
     bandwidthRatePerMbps,
   )
+
+  // ---------------------------------------------------------------------------
+// ADDITIONAL ADMIN BOQ ITEMS
+// ---------------------------------------------------------------------------
+//
+// These items are created from the Admin dashboard.
+//
+// Only enabled items are included.
+//
+// The quantity depends on the administrator's selected quantity basis:
+//
+//   fixed      → quantity = 1
+//   distance   → quantity = fibre distance in metres
+//
+// This allows the admin to create items such as:
+//
+//   Installation charge
+//   Site survey
+//   Fibre deployment
+//   Fibre accessories
+//
+// without changing the code every time.
+// -----------------------------------------------------------------------------
+
+const additionalItems = config.additionalItems || []
+
+additionalItems.forEach(item => {
+
+  // Disabled items should not appear in estimates.
+  if (item.enabled === false) {
+    return
+  }
+
+  // Ignore incomplete items.
+  if (!item.description) {
+    return
+  }
+
+  const rate = Number(item.rate) || 0
+
+
+  // Determine the quantity.
+  const quantity =
+    item.quantityType === 'distance'
+      ? distanceMetres
+      : 1
+
+
+  // Calculate the item's total amount.
+  const amount = Math.round(
+    quantity * rate
+  )
+
+
+  // Add it to NRC or ARC based on its charge type.
+  addRow(
+    item,
+    quantity,
+    amount,
+    rate,
+  )
+})
 
   // Sum all one-off amounts.
   const totalNRC = nrcRows.reduce(

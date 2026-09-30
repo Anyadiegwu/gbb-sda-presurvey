@@ -667,3 +667,255 @@ table.estimate-table td:not(:first-child) { text-align: right; }
 .skip-link:focus { left: 8px; top: 8px; }
 
 :focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
+
+
+/* ============================================
+   ADMIN DASHBOARD
+   ============================================ */
+
+.admin-page {
+  min-height: 100vh;
+  padding: 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+
+/* ---------- Admin Header ---------- */
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-eyebrow {
+  color: var(--emerald);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+
+/* ---------- Admin Sections ---------- */
+
+.admin-section {
+  margin-top: 16px;
+}
+
+.admin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+
+/* ---------- Pricing Table ---------- */
+
+.admin-table-wrap {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-table th {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+
+/* Admin inputs */
+
+.admin-table input,
+.admin-table select,
+.admin-item input,
+.admin-item select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.admin-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+}
+
+
+/* ---------- Empty State ---------- */
+
+.admin-empty {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+
+/* ---------- Additional BOQ Items ---------- */
+
+.admin-items {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.admin-item {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.admin-item-grid {
+  display: grid;
+  grid-template-columns:
+    2fr
+    1fr
+    1fr
+    1fr
+    1.2fr
+    0.7fr;
+
+  gap: 12px;
+  align-items: end;
+}
+
+.admin-item label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+
+/* ---------- Enable Checkbox ---------- */
+
+.checkbox-field {
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+}
+
+
+/* ---------- Delete Button ---------- */
+
+.admin-item .btn-danger {
+  margin-top: 12px;
+}
+
+.btn-danger {
+  background: #fff;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.btn-danger:hover {
+  background: #fff5f4;
+}
+
+
+/* ---------- Network Data ---------- */
+
+.network-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--emerald-light);
+  color: var(--emerald-dark);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+
+/* ---------- Admin Actions ---------- */
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.save-message {
+  color: var(--emerald-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+/* ---------- Admin Responsive ---------- */
+
+@media (max-width: 900px) {
+
+  .admin-page {
+    padding: 20px 16px 50px;
+  }
+
+  .admin-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-item-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
+
+
+@media (max-width: 560px) {
+
+  .admin-section-header,
+  .network-placeholder,
+  .admin-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-actions .btn {
+    width: 100%;
+  }
+
+}

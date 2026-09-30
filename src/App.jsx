@@ -2,81 +2,128 @@
 // -----------------------------------------------------------------------------
 // This is the top-level React component for the Fibre Estimator.
 //
-// Think of App as the "orchestrator" of the application. It owns the main
-// estimate draft and the current step, then passes the relevant data/functions
-// down to the smaller step components.
+// App controls the customer estimator.
 //
-// Data flow:
-//
-//   App state
-//      ↓
-//   LocationStep  → location + distance
-//      ↓
-//   RequirementsStep → bandwidth + rack choice
-//      ↓
-//   calculateEstimate() → pricing calculation
-//      ↓
-//   EstimateStep → displays/export estimate
-//      ↓
-//   SubmitStep → saves the completed request
+// The Admin page is handled separately based on the browser URL.
 // -----------------------------------------------------------------------------
 
 import { useMemo, useState } from 'react'
+
 import Stepper from './components/Stepper'
 import LocationStep from './components/LocationStep'
 import RequirementsStep from './components/RequirementsStep'
 import EstimateStep from './components/EstimateStep'
 import SubmitStep from './components/SubmitStep'
+
 import { calculateEstimate } from './services/pricing'
 
+import Admin from './pages/Admin'
+
+
+// -----------------------------------------------------------------------------
+// INITIAL ESTIMATE DATA
+// -----------------------------------------------------------------------------
+//
 // This object represents the information collected during the estimate.
-// It lives in App so all four steps can access the same draft.
+//
+// It lives in App because multiple child components need access to it.
+//
 const initialDraft = {
   lat: null,
   lng: null,
   distanceMetres: null,
   nearestPopName: null,
+
   bandwidth: '20 Mbps',
   customMbps: null,
+
   providesOwnRack: false,
 }
 
-export default function App() {
-  // `step` controls which screen is currently displayed.
-  // React re-renders App whenever setStep() is called.
+
+// -----------------------------------------------------------------------------
+// CUSTOMER ESTIMATOR
+// -----------------------------------------------------------------------------
+//
+// We put the estimator into its own component.
+//
+// This means the hooks below are always used correctly.
+// -----------------------------------------------------------------------------
+
+function Estimator() {
+
+  // Controls which step of the estimator is currently visible.
   const [step, setStep] = useState(1)
 
-  // `draft` is the shared form state for the whole estimate.
-  // Child components update it through setDraft.
+  // Shared estimate information.
   const [draft, setDraft] = useState(initialDraft)
 
-  // useMemo prevents the pricing calculation from being repeated on every
-  // render when the draft has not changed.
+
+  // ---------------------------------------------------------------------------
+  // CALCULATE ESTIMATE
+  // ---------------------------------------------------------------------------
   //
-  // The calculation is only possible after a valid distance has been selected.
+  // useMemo means React does not unnecessarily recalculate the estimate
+  // when unrelated things cause the component to render.
+  //
   const calculation = useMemo(() => {
-    if (!Number.isFinite(draft.distanceMetres)) return null
+
+    // We cannot calculate a fibre estimate without a distance.
+    if (!Number.isFinite(draft.distanceMetres)) {
+      return null
+    }
+
     return calculateEstimate(draft)
+
   }, [draft])
 
-  // All four steps use this helper to move between screens.
-  // Scrolling to the top makes a step change feel like a new page.
+
+  // ---------------------------------------------------------------------------
+  // MOVE BETWEEN STEPS
+  // ---------------------------------------------------------------------------
+
   const goToStep = nextStep => {
+
     setStep(nextStep)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+
+    // Scroll the page back to the top after changing steps.
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
+
+
+  // ---------------------------------------------------------------------------
+  // CUSTOMER ESTIMATOR UI
+  // ---------------------------------------------------------------------------
 
   return (
     <>
-      {/* Accessibility link: keyboard users can skip directly to the main content. */}
-      <a href="#main-content" className="skip-link">Skip to content</a>
+      {/* Accessibility link for keyboard users. */}
+      <a
+        href="#main-content"
+        className="skip-link"
+      >
+        Skip to content
+      </a>
+
 
       <div className="app-shell">
-        <main className="workspace" id="main-content">
-          {/* The stepper receives the current step so it can show progress. */}
+
+        <main
+          className="workspace"
+          id="main-content"
+        >
+
+          {/* Shows Location → Requirements → Estimate → Submit */}
           <Stepper currentStep={step} />
 
-          {/* Step 1: choose the customer's site location. */}
+
+          {/* ---------------------------------------------------------------
+              STEP 1
+              --------------------------------------------------------------- */}
+
           {step === 1 && (
             <LocationStep
               draft={draft}
@@ -85,7 +132,11 @@ export default function App() {
             />
           )}
 
-          {/* Step 2: choose bandwidth and rack requirements. */}
+
+          {/* ---------------------------------------------------------------
+              STEP 2
+              --------------------------------------------------------------- */}
+
           {step === 2 && (
             <RequirementsStep
               draft={draft}
@@ -95,7 +146,11 @@ export default function App() {
             />
           )}
 
-          {/* Step 3: show the calculated BOQ/estimate. */}
+
+          {/* ---------------------------------------------------------------
+              STEP 3
+              --------------------------------------------------------------- */}
+
           {step === 3 && calculation && (
             <EstimateStep
               calc={calculation}
@@ -104,7 +159,11 @@ export default function App() {
             />
           )}
 
-          {/* Step 4: collect customer information and save the request. */}
+
+          {/* ---------------------------------------------------------------
+              STEP 4
+              --------------------------------------------------------------- */}
+
           {step === 4 && calculation && (
             <SubmitStep
               draft={draft}
@@ -112,8 +171,36 @@ export default function App() {
               onBack={() => goToStep(3)}
             />
           )}
+
         </main>
+
       </div>
     </>
   )
+}
+
+
+// -----------------------------------------------------------------------------
+// APP
+// -----------------------------------------------------------------------------
+//
+// App decides which top-level page should be displayed.
+//
+// /admin → Admin dashboard
+// everything else → customer estimator
+// -----------------------------------------------------------------------------
+
+export default function App() {
+
+  const pathname = window.location.pathname
+
+
+  // Admin page.
+  if (pathname === '/admin') {
+    return <Admin />
+  }
+
+
+  // Customer estimator.
+  return <Estimator />
 }
