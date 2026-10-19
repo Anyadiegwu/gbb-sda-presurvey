@@ -17,7 +17,6 @@ dependencies = [
     "bcrypt==4.0.1",
     "python-multipart==0.0.9",
     "simpleeval==1.0.3",
-    "googlemaps==4.10.0",
     "geoalchemy2==0.15.2",
     "shapely==2.0.6",
     "requests==2.32.3",
@@ -28,6 +27,10 @@ dev = [
     "pytest>=8.3.0",
     "httpx>=0.27.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::UserWarning", "ignore::DeprecationWarning"]
 
 [tool.uv]
 package = false

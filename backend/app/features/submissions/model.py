@@ -38,4 +38,3 @@ class BOQSubmission(SQLModel, table=True):
 
     status: str = Field(default="new")  # new | reviewed | quoted | closed
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    

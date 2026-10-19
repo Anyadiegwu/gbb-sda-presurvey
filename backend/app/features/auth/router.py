@@ -85,7 +85,27 @@ def deactivate_admin(admin_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Admin not found")
     if admin.is_superadmin:
         raise HTTPException(status_code=400, detail="Cannot deactivate a superadmin")
+    if not admin.is_active:
+        raise HTTPException(status_code=400, detail="Admin is already inactive")
     admin.is_active = False
+    session.add(admin)
+    session.commit()
+    session.refresh(admin)
+    return admin
+
+
+@router.patch(
+    "/admins/{admin_id}/activate",
+    response_model=AdminRead,
+    dependencies=[Depends(get_current_superadmin)],
+)
+def activate_admin(admin_id: int, session: Session = Depends(get_session)):
+    admin = session.get(AdminUser, admin_id)
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if admin.is_active:
+        raise HTTPException(status_code=400, detail="Admin is already active")
+    admin.is_active = True
     session.add(admin)
     session.commit()
     session.refresh(admin)

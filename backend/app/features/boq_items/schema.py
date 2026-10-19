@@ -39,4 +39,3 @@ class BOQItemRead(CamelModel):
     is_custom: bool
     is_active: bool
     created_at: datetime
-    

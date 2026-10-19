@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fibre nearest-node demo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
+  aside { padding: 14px; overflow: auto; border-right: 1px solid #ddd; }
+  #map { height: 100%; }
+  h1 { font-size: 16px; margin: 0 0 10px; }
+  label { display: block; margin: 8px 0 2px; font-weight: 600; }
+  input[type=text], input[type=password] { width: 100%; box-sizing: border-box; padding: 6px; }
+  button { margin: 8px 6px 0 0; padding: 7px 10px; cursor: pointer; }
+  .types label { display: inline-block; font-weight: 400; margin-right: 10px; }
+  #out { margin-top: 14px; padding: 10px; background: #f5f5f5; border-radius: 6px; white-space: pre-wrap; }
+  .err { color: #b00020; }
+  @media (max-width: 720px) { body { grid-template-columns: 1fr; grid-template-rows: auto 60vh; height: auto; } }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Nearest FDT / FAT / MH by road</h1>
+  <label>API address</label>
+  <input id="api" type="text" value="http://localhost:8000">
+  <p>Click the map to drop the customer's pin, or:</p>
+  <button id="gps">Use my location</button>
+  <div class="types">
+    <label><input type="checkbox" value="MH" checked> MH</label>
+    <label><input type="checkbox" value="FDT" checked> FDT</label>
+    <label><input type="checkbox" value="FAT" checked> FAT</label>
+    <label><input type="checkbox" value="POP" checked> POP</label>
+  </div>
+  <button id="go">Find nearest</button>
+  <hr>
+  <label>Admin token (optional, to draw the whole network)</label>
+  <input id="token" type="password" placeholder="paste the JWT from POST /auth/login">
+  <button id="layer">Load network layer</button>
+  <div id="out">Pick a location to start.</div>
+</aside>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map').setView([9.1, 8.7], 6);   // Nigeria
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+const $ = id => document.getElementById(id);
+const result = L.layerGroup().addTo(map);
+const network = L.layerGroup().addTo(map);
+let customer = null;
+
+// OSRM returns routes as an encoded polyline (precision 5). Decode to [[lat, lng], ...].
+function decodePolyline(str) {
+  let i = 0, lat = 0, lng = 0; const pts = [];
+  while (i < str.length) {
+    for (const axis of [0, 1]) {
+      let b, shift = 0, value = 0;
+      do { b = str.charCodeAt(i++) - 63; value |= (b & 31) << shift; shift += 5; } while (b >= 32);
+      const delta = (value & 1) ? ~(value >> 1) : (value >> 1);
+      if (axis === 0) lat += delta; else lng += delta;
+    }
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  return pts;
+}
+
+const fmt = m => m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m';
+const selectedTypes = () => [...document.querySelectorAll('.types input:checked')].map(c => c.value);
+
+function setCustomer(lat, lng) {
+  customer = { lat, lng };
+  result.clearLayers();
+  L.circleMarker([lat, lng], { radius: 8, color: '#000', fillColor: '#ffd600', fillOpacity: 1 }).addTo(result).bindPopup('Customer').openPopup();
+}
+
+map.on('click', e => setCustomer(e.latlng.lat, e.latlng.lng));
+$('gps').onclick = () => navigator.geolocation.getCurrentPosition(
+  p => { setCustomer(p.coords.latitude, p.coords.longitude); map.setView([p.coords.latitude, p.coords.longitude], 13); },
+  err => $('out').innerHTML = `<span class="err">Could not get your location: ${err.message}</span>`);
+
+$('go').onclick = async () => {
+  if (!customer) { $('out').textContent = 'Click the map or use your location first.'; return; }
+  $('out').textContent = 'Working…';
+  const res = await fetch($('api').value + '/quotes/resolve-location', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ latitude: customer.lat, longitude: customer.lng, nodeTypes: selectedTypes() })
+  });
+  const d = await res.json();
+  if (!res.ok) { $('out').innerHTML = `<span class="err">${d.detail || res.statusText}</span>`; return; }
+
+  result.clearLayers();
+  L.circleMarker([d.customerLatitude, d.customerLongitude], { radius: 8, color: '#000', fillColor: '#ffd600', fillOpacity: 1 }).addTo(result).bindPopup('Customer');
+  L.circleMarker([d.manholeLatitude, d.manholeLongitude], { radius: 9, color: '#0b6', fillOpacity: .8 })
+    .addTo(result).bindPopup(`${d.nodeType}: ${d.manholeName}`);
+
+  // 1) the road route customer -> node
+  if (d.routePolyline) {
+    const road = L.polyline(decodePolyline(d.routePolyline), { color: '#1565c0', weight: 5 }).addTo(result);
+    map.fitBounds(road.getBounds(), { padding: [40, 40] });
+  }
+  // 2) the short tap from the node to the nearest spot on the backbone cable
+  if (d.fiberlinePointLatitude != null) {
+    L.polyline([[d.manholeLatitude, d.manholeLongitude], [d.fiberlinePointLatitude, d.fiberlinePointLongitude]],
+      { color: '#e65100', dashArray: '6 6', weight: 4 }).addTo(result).bindPopup('Tap to ' + d.fiberlineRouteName);
+  }
+  $('out').textContent =
+    `Nearest: ${d.nodeType} "${d.manholeName}"\n` +
+    `Road distance to it: ${fmt(d.customerToManholeMeters)} (straight line ${fmt(d.straightLineMeters)})\n` +
+    `Node to backbone cable: ${fmt(d.manholeToFiberlineMeters)}` + (d.fiberlineRouteName ? ` (${d.fiberlineRouteName})` : '') + '\n' +
+    `Total cable to quote: ${fmt(d.totalDistanceMeters)}\n\nAddress: ${d.formattedAddress}`;
+};
+
+$('layer').onclick = async () => {
+  const res = await fetch($('api').value + '/admin/network/geojson', { headers: { Authorization: 'Bearer ' + $('token').value } });
+  if (!res.ok) { $('out').innerHTML = `<span class="err">Could not load network (${res.status}). Check the token.</span>`; return; }
+  const colors = { MH: '#6a1b9a', FDT: '#00838f', FAT: '#ef6c00', POP: '#2e7d32' };
+  network.clearLayers();
+  L.geoJSON(await res.json(), {
+    style: f => ({ color: '#c62828', weight: 3, opacity: .8 }),
+    pointToLayer: (f, ll) => L.circleMarker(ll, { radius: 5, color: colors[f.properties.nodeType] || '#333', fillOpacity: .9 }),
+    onEachFeature: (f, layer) => layer.bindPopup(f.properties.kind === 'node'
+      ? `${f.properties.nodeType}: ${f.properties.name}` : f.properties.name)
+  }).addTo(network);
+};
+</script>
+</body>
+</html>

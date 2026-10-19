@@ -66,4 +66,3 @@ class SubmissionRead(CamelModel):
 
 class SubmissionStatusUpdate(CamelModel):
     status: str
-    

@@ -1,12 +1,17 @@
+from typing import Dict, List, Optional, Sequence, Tuple
+
 from sqlmodel import Session
 
 from app.features.boq_items.calculator import CalculationError, calculate_boq
 from app.features.boq_items.model import ChargeType
 from app.features.manholes import repository as manhole_repo
-from app.features.manholes.model import Manhole
+from app.features.manholes.model import Manhole, NodeType
 from app.features.quotes.schema import (
     CalculateQuoteResponse,
+    FiberLinePoint,
     LineItem,
+    NearestNodesResponse,
+    NodeOption,
     ResolveAddressResponse,
 )
 from app.features.routes import repository as route_repo
@@ -17,71 +22,164 @@ class QuoteError(Exception):
     pass
 
 
+# How many straight-line-nearest nodes get a (billable/rate-limited) road
+# distance lookup. More = more accurate pick when a river/highway makes the
+# closest node by air a poor one by road, but heavier routing calls.
+CANDIDATE_LIMIT = 5
+PER_TYPE_CANDIDATE_LIMIT = 3
+
+
 def resolve_address_to_nearest_manhole(
-    session: Session, address: str
+    session: Session, address: str, node_types: Optional[Sequence[str]] = None
 ) -> ResolveAddressResponse:
+    """Customer typed an address: geocode it, then find the nearest node."""
     lat, lng, formatted_address = geo_provider.geocode_address(address)
+    return resolve_location_to_nearest_node(session, lat, lng, formatted_address, node_types)
 
-    # --- Leg 1: customer -> nearest manhole (real road distance) ---
-    candidates = manhole_repo.find_nearest_candidates(session, lat, lng, limit=5)
+
+def _rank_by_road(
+    origin: Tuple[float, float], candidates: List[Manhole]
+) -> List[Tuple[Manhole, float, float]]:
+    """Asks the routing service for the real road distance to every
+    candidate in ONE call. Returns (node, road_meters, straight_meters)
+    sorted shortest road distance first; nodes with no road path are dropped."""
+    distances = geo_provider.get_distances_to_candidates(
+        origin, [(m.latitude, m.longitude) for m in candidates]
+    )
+    ranked = [
+        (
+            node,
+            float(road),
+            manhole_repo.haversine_meters(origin[0], origin[1], node.latitude, node.longitude),
+        )
+        for node, road in zip(candidates, distances)
+        if road is not None
+    ]
+    ranked.sort(key=lambda item: item[1])
+    return ranked
+
+
+def resolve_location_to_nearest_node(
+    session: Session,
+    lat: float,
+    lng: float,
+    formatted_address: Optional[str] = None,
+    node_types: Optional[Sequence[str]] = None,
+) -> ResolveAddressResponse:
+    """Customer location (GPS or geocoded) -> nearest node by road -> nearest
+    point on the fibre backbone to that node."""
+    if formatted_address is None:
+        try:
+            formatted_address = geo_provider.reverse_geocode(lat, lng)
+        except geo_provider.GeoProviderError:
+            formatted_address = f"{lat:.6f}, {lng:.6f}"  # address is cosmetic; don't fail the quote
+
+    # --- Leg 1: customer -> nearest node (real road distance) ---
+    candidates = manhole_repo.find_nearest_candidates(
+        session, lat, lng, limit=CANDIDATE_LIMIT, node_types=node_types
+    )
     if not candidates:
-        raise QuoteError("No manhole locations have been configured yet.")
+        kinds = f" of type {', '.join(node_types)}" if node_types else ""
+        raise QuoteError(f"No network nodes{kinds} have been configured yet.")
 
-    destinations = [(m.latitude, m.longitude) for m in candidates]
-    distances = geo_provider.get_distances_to_candidates((lat, lng), destinations)
+    ranked = _rank_by_road((lat, lng), candidates)
+    if not ranked:
+        raise QuoteError("Could not find a routable road path to any network node.")
 
-    best_index = None
-    best_distance = None
-    for index, distance in enumerate(distances):
-        if distance is None:
-            continue
-        if best_distance is None or distance < best_distance:
-            best_distance = distance
-            best_index = index
-
-    if best_index is None:
-        raise QuoteError("Could not find a routable path to any manhole location.")
-
-    winning_manhole = candidates[best_index]
-    customer_to_manhole_meters = best_distance
+    winning_node, customer_to_node_meters, straight_line_meters = ranked[0]
     polyline = geo_provider.get_route_polyline(
-        (lat, lng), (winning_manhole.latitude, winning_manhole.longitude)
+        (lat, lng), (winning_node.latitude, winning_node.longitude)
     )
 
-    # --- Leg 2: manhole -> nearest point on the fiber backbone line ---
+    # --- Leg 2: node -> nearest point on the fiber backbone line ---
     # Straight-line/geodesic distance, not road routing -- this is a short
-    # physical tap/splice from the manhole down to the buried cable, not a
+    # physical tap/splice from the node down to the buried cable, not a
     # trip along a road.
     fiberline_route_id = None
     fiberline_route_name = None
-    manhole_to_fiberline_meters = 0.0
+    node_to_fiberline_meters = 0.0
+    fiberline_point_lat = None
+    fiberline_point_lng = None
 
     nearest_route = route_repo.find_nearest_route(
-        session, winning_manhole.latitude, winning_manhole.longitude
+        session, winning_node.latitude, winning_node.longitude
     )
     if nearest_route:
         fiberline_route_id = nearest_route["route_id"]
         fiberline_route_name = nearest_route["route_name"]
-        manhole_to_fiberline_meters = nearest_route["distance_meters"]
+        node_to_fiberline_meters = nearest_route["distance_meters"]
+        fiberline_point_lat = nearest_route["point_latitude"]
+        fiberline_point_lng = nearest_route["point_longitude"]
     # If no fiber route data has been imported yet, we don't hard-fail the
-    # quote -- manhole_to_fiberline_meters just stays 0.
-
-    total_distance_meters = customer_to_manhole_meters + manhole_to_fiberline_meters
+    # quote -- node_to_fiberline_meters just stays 0.
 
     return ResolveAddressResponse(
         formatted_address=formatted_address,
         customer_latitude=lat,
         customer_longitude=lng,
-        manhole_id=winning_manhole.id,
-        manhole_name=winning_manhole.name,
-        manhole_latitude=winning_manhole.latitude,
-        manhole_longitude=winning_manhole.longitude,
-        customer_to_manhole_meters=customer_to_manhole_meters,
+        manhole_id=winning_node.id,
+        manhole_name=winning_node.name,
+        node_type=winning_node.node_type,
+        manhole_folder=winning_node.folder,
+        manhole_latitude=winning_node.latitude,
+        manhole_longitude=winning_node.longitude,
+        customer_to_manhole_meters=customer_to_node_meters,
+        straight_line_meters=straight_line_meters,
         route_polyline=polyline,
         fiberline_route_id=fiberline_route_id,
         fiberline_route_name=fiberline_route_name,
-        manhole_to_fiberline_meters=manhole_to_fiberline_meters,
-        total_distance_meters=total_distance_meters,
+        manhole_to_fiberline_meters=node_to_fiberline_meters,
+        fiberline_point_latitude=fiberline_point_lat,
+        fiberline_point_longitude=fiberline_point_lng,
+        total_distance_meters=customer_to_node_meters + node_to_fiberline_meters,
+    )
+
+
+def find_nearest_nodes_by_type(
+    session: Session,
+    lat: float,
+    lng: float,
+    node_types: Optional[Sequence[str]] = None,
+) -> NearestNodesResponse:
+    """The closest MH, closest FDT, closest FAT (and so on) to a point, each
+    by real road distance, plus the closest spot on the fibre cable itself.
+    Uses a single routing call for all candidates of all types."""
+    types = list(node_types) if node_types else [t.value for t in NodeType]
+
+    candidates: Dict[int, Manhole] = {}
+    for node_type in types:
+        for node in manhole_repo.find_nearest_candidates(
+            session, lat, lng, limit=PER_TYPE_CANDIDATE_LIMIT, node_types=[node_type]
+        ):
+            candidates[node.id] = node
+
+    best_per_type: List[NodeOption] = []
+    if candidates:
+        ranked = _rank_by_road((lat, lng), list(candidates.values()))
+        seen = set()
+        for node, road, straight in ranked:  # already shortest-first
+            if node.node_type in seen:
+                continue
+            seen.add(node.node_type)
+            best_per_type.append(
+                NodeOption(
+                    id=node.id,
+                    name=node.name,
+                    node_type=node.node_type,
+                    folder=node.folder,
+                    latitude=node.latitude,
+                    longitude=node.longitude,
+                    road_distance_meters=road,
+                    straight_line_meters=straight,
+                )
+            )
+
+    nearest_line = route_repo.find_nearest_route(session, lat, lng)
+    return NearestNodesResponse(
+        customer_latitude=lat,
+        customer_longitude=lng,
+        nearest_by_type=best_per_type,
+        nearest_fiber_line=FiberLinePoint(**nearest_line) if nearest_line else None,
     )
 
 
@@ -139,3 +237,4 @@ def calculate_quote(
         total_arc=result.total_arc,
         grand_total=result.grand_total,
     )
+    

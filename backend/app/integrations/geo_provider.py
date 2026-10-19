@@ -28,10 +28,10 @@ from typing import Callable, List, Optional, Tuple, TypeVar
 
 import requests
 
-from app.core.config import LOCATIONIQ_API_KEY
+from app.core.config import GEOCODE_COUNTRY_CODES, LOCATIONIQ_API_KEY, OSRM_BASE_URL
 
 LOCATIONIQ_URL = "https://us1.locationiq.com/v1/search"
-OSRM_BASE_URL = "https://router.project-osrm.org"
+LOCATIONIQ_REVERSE_URL = "https://us1.locationiq.com/v1/reverse"
 
 # --- Retry tuning ---------------------------------------------------------
 # The OSRM public demo server has no uptime guarantee and occasionally
@@ -75,30 +75,60 @@ def _with_retry(operation_name: str, fn: Callable[[], T]) -> T:
     ) from last_exc
 
 
-def geocode_address(address: str) -> Tuple[float, float, str]:
-    """Returns (latitude, longitude, formatted_address)."""
+def _require_key() -> None:
     if not LOCATIONIQ_API_KEY:
         raise GeoProviderError(
             "LOCATIONIQ_API_KEY is not set. Sign up free at "
             "https://locationiq.com/register and add it to your .env file."
         )
 
+
+def geocode_address(address: str) -> Tuple[float, float, str]:
+    """Returns (latitude, longitude, formatted_address)."""
+    _require_key()
+
+    params = {"key": LOCATIONIQ_API_KEY, "q": address, "format": "json", "limit": 1}
+    if GEOCODE_COUNTRY_CODES:
+        params["countrycodes"] = GEOCODE_COUNTRY_CODES
+
     def _do_request():
-        response = requests.get(
-            LOCATIONIQ_URL,
-            params={"key": LOCATIONIQ_API_KEY, "q": address, "format": "json", "limit": 1},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
+        response = requests.get(LOCATIONIQ_URL, params=params, timeout=REQUEST_TIMEOUT_SECONDS)
+        # LocationIQ answers 404 for "no match" -- a real answer, not a
+        # transient failure, so don't retry it.
+        if response.status_code == 404:
+            return []
+        if response.status_code == 429:
+            raise GeoProviderError("Geocoding rate limit reached. Please try again shortly.")
         response.raise_for_status()
         return response.json()
 
     results = _with_retry("Geocoding request", _do_request)
 
     if not results:
-        raise GeoProviderError(f"Could not geocode address: {address!r}")
+        raise GeoProviderError(f"Could not find that address: {address!r}")
 
     result = results[0]
     return float(result["lat"]), float(result["lon"]), result.get("display_name", address)
+
+
+def reverse_geocode(latitude: float, longitude: float) -> str:
+    """Human-readable address for a GPS point (best effort; callers should
+    fall back to the raw coordinates if this raises)."""
+    _require_key()
+
+    def _do_request():
+        response = requests.get(
+            LOCATIONIQ_REVERSE_URL,
+            params={"key": LOCATIONIQ_API_KEY, "lat": latitude, "lon": longitude, "format": "json"},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        if response.status_code == 404:
+            return {}
+        response.raise_for_status()
+        return response.json()
+
+    result = _with_retry("Reverse geocoding request", _do_request)
+    return result.get("display_name") or f"{latitude:.6f}, {longitude:.6f}"
 
 
 def get_distances_to_candidates(

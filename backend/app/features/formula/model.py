@@ -19,4 +19,3 @@ class CalculationFormula(SQLModel, table=True):
     expression: str  # e.g. "distance_m * rate" or "bandwidth_mbps * rate"
     is_active: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    

@@ -21,4 +21,3 @@ class FormulaRead(CamelModel):
 class FormulaValidateRequest(CamelModel):
     item_key: str
     expression: str
-    

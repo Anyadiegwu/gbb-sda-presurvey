@@ -447,7 +447,6 @@ dependencies = [
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "geoalchemy2" },
-    { name = "googlemaps" },
     { name = "passlib", extra = ["bcrypt"] },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
@@ -474,7 +473,6 @@ requires-dist = [
     { name = "email-validator", specifier = "==2.2.0" },
     { name = "fastapi", specifier = "==0.115.0" },
     { name = "geoalchemy2", specifier = "==0.15.2" },
-    { name = "googlemaps", specifier = "==4.10.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = "==1.7.4" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.2.9" },
     { name = "pydantic-settings", specifier = "==2.5.2" },
@@ -506,15 +504,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/a1/38/bac6dce23250751ce
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/f7/a71bbed7252af7db0746b81b83d68bd400f169e49d3726072e547774d949/GeoAlchemy2-0.15.2-py3-none-any.whl", hash = "sha256:546455dc39f5bcdfc5b871e57d3f7546c8a6f798eb364c474200f488ace6fd32", size = 73601, upload-time = "2024-07-10T18:53:34.151Z" },
 ]
-
-[[package]]
-name = "googlemaps"
-version = "4.10.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/26/bca4d737a9acea25e94c19940a780bbf0be64a691f7caf3a68467d3a5838/googlemaps-4.10.0.tar.gz", hash = "sha256:3055fcbb1aa262a9159b589b5e6af762b10e80634ae11c59495bd44867e47d88", size = 33056, upload-time = "2023-01-26T16:45:02.501Z" }
 
 [[package]]
 name = "greenlet"
